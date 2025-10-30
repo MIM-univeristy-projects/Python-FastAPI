@@ -1,10 +1,10 @@
 from typing import Union
 
 from fastapi import FastAPI
-from .routers import example
+from routers import example_router
 
 app = FastAPI()
-app.include_router(example.router)
+app.include_router(example_router.router)
 
 
 @app.get("/")
