@@ -20,7 +20,8 @@
 				"njpwerner.autodocstring",
 				"ms-azuretools.vscode-docker",
 				"DavidAnson.vscode-markdownlint",
-				"bradlc.vscode-tailwindcss"
+				"bradlc.vscode-tailwindcss",
+				"cweijan.vscode-database-client2"
 			],
 			"settings": {
 				"python.defaultInterpreterPath": ".venv"
