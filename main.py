@@ -1,9 +1,21 @@
 from typing import Union
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
-from routers import example_router
+from sqlmodel import SQLModel
 
-app = FastAPI()
+from routers import example_router
+from database.database import engine
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Lifespan context manager for application startup/shutdown events."""
+    SQLModel.metadata.create_all(engine)
+    yield
+
+
+app = FastAPI(lifespan=lifespan)
 app.include_router(example_router.router)
 
 
