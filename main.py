@@ -1,11 +1,10 @@
-from typing import Union
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from sqlmodel import SQLModel
 
-from routers import example_router
 from database.database import engine
+from routers import example_router
 
 
 @asynccontextmanager
@@ -25,5 +24,5 @@ def read_root():
 
 
 @app.get("/items/{item_id}")
-def read_item(item_id: int, q: Union[str, None] = None):
+def read_item(item_id: int, q: str | None = None):
     return {"item_id": item_id, "q": q}

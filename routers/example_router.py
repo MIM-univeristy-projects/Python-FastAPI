@@ -3,7 +3,7 @@ from sqlmodel import Session
 
 from database.database import get_session
 from models.models import Hero
-from repositories.user_repo import get_hero_by_id, get_all_heroes, create_hero
+from repositories.user_repo import create_hero, get_all_heroes, get_hero_by_id
 
 router = APIRouter(prefix="/heroes", tags=["heroes"])
 
