@@ -31,6 +31,8 @@ erDiagram
     }
 
     post_likes {
+        INTEGER id PK
+        TEXT type
         INTEGER user_id FK
         INTEGER post_id FK
     }
@@ -50,18 +52,6 @@ erDiagram
         TEXT content
         INTEGER sender_id FK
         INTEGER conversation_id FK
-    }
-
-    groups {
-        INTEGER id PK
-        VARCHAR name
-        INTEGER owner_id FK
-    }
-
-    group_members {
-        INTEGER user_id FK
-        INTEGER group_id FK
-        VARCHAR role
     }
 
     events {
@@ -102,8 +92,6 @@ erDiagram
     conversations ||--o{ messages : "contains"
     conversations ||--|{ conversation_participants : "has"
     users ||--|{ conversation_participants : "is_in"
-    groups ||--|{ group_members : "has"
-    users ||--|{ group_members : "is_in"
     events ||--|{ event_attendees : "has"
     users ||--|{ event_attendees : "is_in"
     pages ||--|{ page_followers : "has"
