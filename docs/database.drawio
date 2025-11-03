@@ -18,8 +18,6 @@ erDiagram
         INTEGER id PK
         TEXT content
         INTEGER author_id FK
-        INTEGER group_id FK
-        INTEGER page_id FK
         TIMESTAMP created_at
     }
 
