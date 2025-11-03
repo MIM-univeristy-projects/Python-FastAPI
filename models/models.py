@@ -52,3 +52,27 @@ class PostLikes(
     text: str = Field(sa_column=Column(TEXT))
     user_id: int = Field(foreign_key="user.id")
     post_id: int = Field(foreign_key="post.id")
+
+
+class Conversation(SQLModel, table=True):
+    id: int = Field(primary_key=True)
+    title: str
+
+
+class ConverstationParticipants(SQLModel, table=True):
+    user_id: int = Field(foreign_key="user.id")
+    conversation_id: int = Field(foreign_key="conversation.id")
+
+
+class Comments(SQLModel, table=True):
+    id: int = Field(primary_key=True)
+    content: str = Field(sa_column=Column(TEXT))
+    author_id: int = Field(foreign_key="user.id")
+    post_id: int = Field(foreign_key="post.id")
+
+
+class Messages(SQLModel, table=True):
+    id: int = Field(primary_key=True)
+    content: str = Field(sa_column=Column(TEXT))
+    sender_id: int = Field(foreign_key="user.id")
+    conversation_id: int = Field(foreign_key="conversation.id")
