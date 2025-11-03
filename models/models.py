@@ -1,6 +1,7 @@
 import enum
 from datetime import datetime
 
+from pydantic import BaseModel
 from sqlalchemy import TEXT, Column
 from sqlalchemy import Enum as SAEnum
 from sqlmodel import Field, SQLModel
@@ -25,6 +26,12 @@ class User(SQLModel, table=True):
     hashed_password: str
     is_active: bool = Field(default=False)
     created_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+class UserCreate(BaseModel):
+    email: str
+    username: str
+    password: str
 
 
 class Post(SQLModel, table=True):
