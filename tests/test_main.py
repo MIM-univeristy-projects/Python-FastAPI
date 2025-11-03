@@ -91,7 +91,7 @@ def test_read_hero_invalid_id_type(client: TestClient):
     assert response.status_code == 422
 
 
-# Tests for the read_user endpoint
+# Tests for the users endpoint
 
 
 def test_read_user_by_username_success(client: TestClient, session: Session):
@@ -106,3 +106,9 @@ def test_read_user_by_username_success(client: TestClient, session: Session):
     data = response.json()
     assert data["id"] == user.id
     assert data["username"] == "example"
+
+
+def test_read_user_by_username_not_found(client: TestClient, session: Session):
+    response = client.get("/users/user_not_found")
+    assert response.status_code == 404
+    assert response.json() == {"detail": "User not found"}
