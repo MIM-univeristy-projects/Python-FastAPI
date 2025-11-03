@@ -1,7 +1,14 @@
+import enum
 from datetime import datetime
 
 from sqlalchemy import TEXT, Column
+from sqlalchemy import Enum as SAEnum
 from sqlmodel import Field, SQLModel
+
+
+class FriendshipStatusEnum(str, enum.Enum):
+    BUDDY = "buddy"
+    STRANGER = "stranger"
 
 
 class Hero(SQLModel, table=True):
@@ -25,3 +32,12 @@ class Post(SQLModel, table=True):
     text: str = Field(sa_column=Column(TEXT))
     author_id: int = Field(foreign_key="user.id")
     created_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+class Friendship(SQLModel, table=True):
+    id: int = Field(primary_key=True)
+    requester_id: int = Field(foreign_key="user.id")
+    addressee_id: int = Field(foreign_key="user.id")
+    status: str = Field(
+        sa_column=Column(SAEnum(FriendshipStatusEnum)), default=FriendshipStatusEnum.STRANGER
+    )
