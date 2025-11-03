@@ -3,7 +3,7 @@
 from fastapi.testclient import TestClient
 from sqlmodel import Session
 
-from models.models import Hero
+from models.models import Hero, User
 
 
 def test_read_root(client: TestClient):
@@ -89,3 +89,17 @@ def test_read_hero_invalid_id_type(client: TestClient):
 
     # Assert: FastAPI returns 422 for validation error
     assert response.status_code == 422
+
+
+# Tests for the read_user endpoint
+
+
+def test_read_user_by_username_success(client: TestClient, session: Session):
+    user = User(id=1, email="example@example.com", username="example", hashed_password="test")
+
+    response = client.get(f"/heroes/{user.username}")
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["id"] == user.id
+    assert data["username"] == "example"

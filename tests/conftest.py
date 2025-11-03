@@ -1,4 +1,5 @@
 """Pytest configuration and fixtures for testing."""
+
 import pytest
 from fastapi.testclient import TestClient
 from sqlmodel import Session, SQLModel, create_engine
@@ -24,6 +25,7 @@ def session_fixture():
 @pytest.fixture(name="client")
 def client_fixture(session: Session):
     """Create a test client with overridden database session."""
+
     def get_session_override():
         return session
 
