@@ -41,3 +41,14 @@ class Friendship(SQLModel, table=True):
     status: str = Field(
         sa_column=Column(SAEnum(FriendshipStatusEnum)), default=FriendshipStatusEnum.STRANGER
     )
+
+
+class PostLikes(
+    SQLModel,
+    table=True,
+):
+    __tablename__ = "post_likes"  # type: ignore
+    id: int = Field(primary_key=True)
+    text: str = Field(sa_column=Column(TEXT))
+    user_id: int = Field(foreign_key="user.id")
+    post_id: int = Field(foreign_key="post.id")
