@@ -4,8 +4,9 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from sqlmodel import SQLModel
 
+# from routers import example_router, user_router
 from database.database import engine
-from routers import example_router
+from routers import example_router, user_router
 
 
 @asynccontextmanager
@@ -17,6 +18,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 app.include_router(example_router.router)
+app.include_router(user_router.router)
 
 origins: list[str] = [
     "http://localhost",
