@@ -7,7 +7,8 @@ from sqlmodel import Session
 
 from database.database import get_session
 from models.models import User, UserCreate
-from repositories.user_repo import get_user_by_username
+from repositories.user_repo import create_user, get_user_by_email, get_user_by_username
+from services.security import get_password_hash
 
 router = APIRouter(prefix="/users", tags=["users"])
 
@@ -33,10 +34,30 @@ def read_user_by_username(user_username: str, session: Session = session) -> Use
 
 
 @router.post("/register")
-def register_user(user: UserCreate):
+def register_user(user: UserCreate, session: Session = session):
     valid_email = is_valid_email(user.email)
     if not valid_email:
         raise HTTPException(status_code=http.HTTPStatus.BAD_REQUEST, detail="Incorret Email")
     valid_password = is_valid_password(user.password)
     if not valid_password:
-        raise HTTPException(status_code=http.HTTPStatus.BAD_REQUEST, detail="Incorret Password")
+        raise HTTPException(
+            status_code=http.HTTPStatus.BAD_REQUEST,
+            detail="Password must have: 8 characters, a special character and an uppercase letter",
+        )
+    user_from_database = get_user_by_username(session=session, username=user.username)
+    if user_from_database:
+        raise HTTPException(
+            status_code=http.HTTPStatus.BAD_REQUEST, detail="Username already exists"
+        )
+    user_from_database = get_user_by_email(session=session, email=user.email)
+    if user_from_database:
+        raise HTTPException(status_code=http.HTTPStatus.BAD_REQUEST, detail="Email already exists")
+
+    user_create = User(
+        id=None,
+        email=user.email,
+        username=user.username,
+        hashed_password=get_password_hash(user.password),
+    )
+
+    return create_user(session=session, user=user_create)
