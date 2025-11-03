@@ -30,14 +30,25 @@ def is_valid_password(password):
 
 @router.get("/{user_username}")
 def read_user_by_username(user_username: str, session: Session = session) -> User | None:
-    return get_user_by_username(session, user_username)
+    user = get_user_by_username(session, user_username)
+    if not user:
+        raise HTTPException(status_code=http.HTTPStatus.NOT_FOUND, detail="User not found")
+    return user
+
+
+@router.get("/{user_email}")
+def read_user_by_email(user_email: str, session: Session = session) -> User | None:
+    user = get_user_by_email(session, user_email)
+    if not user:
+        raise HTTPException(status_code=http.HTTPStatus.NOT_FOUND, detail="User not found")
+    return user
 
 
 @router.post("/register")
 def register_user(user: UserCreate, session: Session = session):
     valid_email = is_valid_email(user.email)
     if not valid_email:
-        raise HTTPException(status_code=http.HTTPStatus.BAD_REQUEST, detail="Incorret Email")
+        raise HTTPException(status_code=http.HTTPStatus.BAD_REQUEST, detail="Incorrect Email")
     valid_password = is_valid_password(user.password)
     if not valid_password:
         raise HTTPException(
