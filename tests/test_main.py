@@ -96,8 +96,11 @@ def test_read_hero_invalid_id_type(client: TestClient):
 
 def test_read_user_by_username_success(client: TestClient, session: Session):
     user = User(id=1, email="example@example.com", username="example", hashed_password="test")
+    session.add(user)
+    session.commit()
+    session.refresh(user)
 
-    response = client.get(f"/heroes/{user.username}")
+    response = client.get(f"/users/{user.username}")
 
     assert response.status_code == 200
     data = response.json()
