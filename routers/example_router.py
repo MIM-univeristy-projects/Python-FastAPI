@@ -7,15 +7,17 @@ from repositories.user_repo import create_hero, get_all_heroes, get_hero_by_id
 
 router = APIRouter(prefix="/heroes", tags=["heroes"])
 
+session: Session = Depends(get_session)
+
 
 @router.get("/")
-def read_heroes(session: Session = Depends(get_session)) -> list[Hero]:
+def read_heroes(session: Session = session) -> list[Hero]:
     """Get all heroes."""
     return get_all_heroes(session)
 
 
 @router.get("/{hero_id}")
-def read_hero(hero_id: int, session: Session = Depends(get_session)) -> Hero:
+def read_hero(hero_id: int, session: Session = session) -> Hero:
     """Get a hero by ID."""
     hero = get_hero_by_id(session, hero_id)
     if not hero:
@@ -24,7 +26,7 @@ def read_hero(hero_id: int, session: Session = Depends(get_session)) -> Hero:
 
 
 @router.post("/")
-def create_new_hero(hero: Hero, session: Session = Depends(get_session)) -> Hero:
+def create_new_hero(hero: Hero, session: Session = session) -> Hero:
     """Create a new hero."""
     return create_hero(session, hero)
 
