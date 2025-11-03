@@ -59,7 +59,8 @@ class Conversation(SQLModel, table=True):
     title: str
 
 
-class ConverstationParticipants(SQLModel, table=True):
+class ConversationParticipants(SQLModel, table=True):
+    id: int = Field(primary_key=True)
     user_id: int = Field(foreign_key="user.id")
     conversation_id: int = Field(foreign_key="conversation.id")
 
