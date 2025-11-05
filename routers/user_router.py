@@ -65,7 +65,6 @@ def register_user(user: UserCreate, session: Session = session):
         raise HTTPException(status_code=http.HTTPStatus.BAD_REQUEST, detail="Email already exists")
 
     user_create = User(
-        id=None,
         email=user.email,
         username=user.username,
         hashed_password=get_password_hash(user.password),
