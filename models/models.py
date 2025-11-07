@@ -12,13 +12,11 @@ class FriendshipStatusEnum(str, enum.Enum):
     STRANGER = "stranger"
 
 
-class Hero(SQLModel, table=True):
-    """Hero model for storing hero information."""
+class UserRole(str, enum.Enum):
+    """User role enumeration for role-based access control."""
 
-    id: int | None = Field(default=None, primary_key=True)
-    name: str
-    secret_name: str
-    age: int | None = None
+    USER = "user"
+    ADMIN = "admin"
 
 
 class User(SQLModel, table=True):
@@ -28,6 +26,7 @@ class User(SQLModel, table=True):
     email: str = Field(unique=True, index=True)
     username: str = Field(unique=True, index=True)
     hashed_password: str
+    role: str = Field(sa_column=Column(SAEnum(UserRole)), default=UserRole.USER)
     is_active: bool = Field(default=False)
     created_at: datetime = Field(default=datetime.now(UTC))
 
@@ -38,6 +37,38 @@ class UserCreate(BaseModel):
     email: str
     username: str
     password: str
+
+
+class UserResponse(BaseModel):
+    """User response model for returning user data to frontend."""
+
+    id: int
+    email: str
+    username: str
+    role: str
+    is_active: bool
+    created_at: datetime
+
+
+class Token(BaseModel):
+    """Token model for authentication responses."""
+
+    access_token: str
+    token_type: str
+
+
+class TokenResponse(BaseModel):
+    """Extended token response including user information with role."""
+
+    access_token: str
+    token_type: str
+    user: UserResponse
+
+
+class TokenData(BaseModel):
+    """Token data model for storing decoded token information."""
+
+    username: str | None = None
 
 
 class Post(SQLModel, table=True):

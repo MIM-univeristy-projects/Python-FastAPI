@@ -1,36 +1,13 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from sqlmodel import Session
 
 from database.database import get_session
-from models.models import Hero
-from repositories.user_repo import create_hero, get_all_heroes, get_hero_by_id
 
-router = APIRouter(prefix="/heroes", tags=["heroes"])
+router = APIRouter(prefix="/example", tags=["example"])
 
 session: Session = Depends(get_session)
 
 
 @router.get("/")
-def read_heroes(session: Session = session) -> list[Hero]:
-    """Get all heroes."""
-    return get_all_heroes(session)
-
-
-@router.get("/{hero_id}")
-def read_hero(hero_id: int, session: Session = session) -> Hero:
-    """Get a hero by ID."""
-    hero = get_hero_by_id(session, hero_id)
-    if not hero:
-        raise HTTPException(status_code=404, detail="Hero not found")
-    return hero
-
-
-@router.post("/")
-def create_new_hero(hero: Hero, session: Session = session) -> Hero:
-    """Create a new hero."""
-    return create_hero(session, hero)
-
-
-@router.get("/example")
 def read_example():
     return {"message": "This is an example route"}
