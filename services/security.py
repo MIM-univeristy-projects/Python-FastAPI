@@ -8,7 +8,7 @@ from sqlmodel import Session
 
 from database.database import get_session
 from models.models import TokenData, User, UserRole
-from repositories.user_repo import get_user_by_username
+from repositories.user_repo import get_user_by_email, get_user_by_username
 
 # To get a string like this run:
 # openssl rand -hex 32
@@ -28,10 +28,13 @@ def get_password_hash(password: str):
     return password_hash.hash(password)
 
 
-def authenticate_user(session: Session, username: str, password: str) -> User | None:
-    user = get_user_by_username(session, username)
+def authenticate_user(session: Session, username_or_password: str, password: str) -> User | None:
+    user = get_user_by_username(session, username_or_password)
     if not user:
-        return None
+        user = get_user_by_email(session, username_or_password)
+        if not user:
+            return None
+
     if not verify_password(password, user.hashed_password):
         return None
     return user
