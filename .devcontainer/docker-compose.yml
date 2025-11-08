@@ -9,13 +9,13 @@ services:
 
   postgres:
     image: postgres:latest
-    hostname: postgres-devcontainer
-    container_name: postgres-devcontainer
+    hostname: postgres
+    container_name: postgres
     ports:
       - "5432:5432"
     environment:
       - POSTGRES_USER=postgres
       - POSTGRES_DB=postgres
-      - POSTGRES_HOST=postgres-devcontainer
+      - POSTGRES_HOST=postgres
       - POSTGRES_PORT=5432
       - POSTGRES_PASSWORD=postgres

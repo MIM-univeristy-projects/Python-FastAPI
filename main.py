@@ -4,10 +4,9 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from sqlmodel import Session, SQLModel, select
 
-# from routers import example_router, user_router
 from database.database import engine
 from models.models import User, UserRole
-from routers import admin_router, auth_routes, example_router, user_router
+from routers import admin_router, auth_routes, user_router
 from services.security import get_password_hash
 
 
@@ -54,7 +53,6 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(lifespan=lifespan)
-app.include_router(example_router.router)
 app.include_router(user_router.router)
 app.include_router(admin_router.router)
 app.include_router(auth_routes.router)
