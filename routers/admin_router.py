@@ -1,7 +1,7 @@
 import http
 
 from fastapi import APIRouter, Depends, HTTPException
-from sqlmodel import Session
+from sqlmodel import Session, select
 
 from database.database import get_session
 from models.models import User, UserResponse
@@ -11,29 +11,29 @@ from services.security import get_current_admin_user
 router = APIRouter(prefix="/admin", tags=["admin"])
 
 session: Session = Depends(get_session)
+current_admin: User = Depends(get_current_admin_user)
 
 
-@router.get("/username/{username}", response_model=UserResponse)
+@router.get("/users", response_model=list[User])
+def read_all_users(
+    session: Session = session,
+    current_admin: User = current_admin,
+) -> list[User]:
+    """Admin-only endpoint to get all users."""
+    users = session.exec(select(User)).all()
+    return list(users)
+
+
+@router.get("/user/{identifier}", response_model=UserResponse)
 def read_user_by_username(
-    username: str,
+    identifier: str,
     session: Session = session,
-    current_admin: User = Depends(get_current_admin_user),
+    current_admin: User = current_admin,
 ) -> User | None:
-    """Admin-only endpoint to get user by username."""
-    user = get_user_by_username(session, username)
+    """Admin-only endpoint to get user by username or email."""
+    user = get_user_by_username(session, identifier)
     if not user:
-        raise HTTPException(status_code=http.HTTPStatus.NOT_FOUND, detail="User not found")
-    return user
-
-
-@router.get("/email/{email}", response_model=UserResponse)
-def read_user_by_email(
-    email: str,
-    session: Session = session,
-    current_admin: User = Depends(get_current_admin_user),
-) -> User | None:
-    """Admin-only endpoint to get user by email."""
-    user = get_user_by_email(session, email)
-    if not user:
-        raise HTTPException(status_code=http.HTTPStatus.NOT_FOUND, detail="User not found")
+        user = get_user_by_email(session, identifier)
+        if not user:
+            raise HTTPException(status_code=http.HTTPStatus.NOT_FOUND, detail="User not found")
     return user
