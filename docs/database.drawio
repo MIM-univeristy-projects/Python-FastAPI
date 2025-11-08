@@ -4,6 +4,9 @@ erDiagram
         VARCHAR email UNIQUE
         VARCHAR username UNIQUE
         VARCHAR hashed_password
+        VARCHAR first_name
+        VARCHAR last_name
+        VARCHAR role
         BOOLEAN is_active
         TIMESTAMP created_at
     }

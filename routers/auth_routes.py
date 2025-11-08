@@ -49,6 +49,8 @@ async def login(
             id=user.id,
             email=user.email,
             username=user.username,
+            first_name=user.first_name,
+            last_name=user.last_name,
             role=user.role,
             is_active=user.is_active,
             created_at=user.created_at,

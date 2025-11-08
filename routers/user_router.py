@@ -56,6 +56,8 @@ async def register_user(user: UserCreate, session: Session = session):
     user_create = User(
         email=user.email,
         username=user.username,
+        first_name=user.first_name,
+        last_name=user.last_name,
         hashed_password=get_password_hash(user.password),
         is_active=True,
     )

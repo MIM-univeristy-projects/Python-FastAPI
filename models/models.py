@@ -25,6 +25,8 @@ class User(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
     email: str = Field(unique=True, index=True)
     username: str = Field(unique=True, index=True)
+    first_name: str
+    last_name: str
     hashed_password: str
     role: str = Field(sa_column=Column(SAEnum(UserRole)), default=UserRole.USER)
     is_active: bool = Field(default=False)
@@ -36,6 +38,8 @@ class UserCreate(BaseModel):
 
     email: str
     username: str
+    first_name: str
+    last_name: str
     password: str
 
 
@@ -45,6 +49,8 @@ class UserResponse(BaseModel):
     id: int
     email: str
     username: str
+    first_name: str
+    last_name: str
     role: str
     is_active: bool
     created_at: datetime

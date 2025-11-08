@@ -18,6 +18,8 @@ async def lifespan(app: FastAPI):
     user: User = User(
         username="testuser",
         email="testuser@example.com",
+        first_name="Test",
+        last_name="User",
         hashed_password=get_password_hash("TestPassword123"),
         is_active=True,
     )
@@ -33,6 +35,8 @@ async def lifespan(app: FastAPI):
     admin: User = User(
         username="admin",
         email="admin@example.com",
+        first_name="Admin",
+        last_name="User",
         hashed_password=get_password_hash("AdminPassword123"),
         is_active=True,
         role=UserRole.ADMIN,
