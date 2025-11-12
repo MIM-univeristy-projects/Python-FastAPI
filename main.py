@@ -2,11 +2,12 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import RedirectResponse
 from sqlmodel import Session, SQLModel, select
 
 from database.database import engine
 from models.models import User, UserRole
-from routers import admin_router, auth_routes, post_router, user_router
+from routers import admin_router, auth_routes, friendship_router, post_router, user_router
 from services.security import get_password_hash
 
 
@@ -19,6 +20,23 @@ async def lifespan(app: FastAPI):
         email="testuser@example.com",
         first_name="Test",
         last_name="User",
+        hashed_password=get_password_hash("TestPassword123"),
+        is_active=True,
+    )
+    with Session(engine) as session:
+        existing_user = session.exec(
+            select(User).where(User.username == user.username)
+        ).one_or_none()
+        if not existing_user:
+            session.add(user)
+            session.commit()
+            session.refresh(user)
+
+    user: User = User(
+        username="testuser2",
+        email="testuser2@example.com",
+        first_name="Test2",
+        last_name="User2",
         hashed_password=get_password_hash("TestPassword123"),
         is_active=True,
     )
@@ -57,6 +75,7 @@ app.include_router(user_router.router)
 app.include_router(admin_router.router)
 app.include_router(auth_routes.router)
 app.include_router(post_router.router)
+app.include_router(friendship_router.router)
 
 origins: list[str] = [
     "http://localhost",
@@ -75,4 +94,4 @@ app.add_middleware(
 
 @app.get("/")
 def read_root():
-    return {"Hello": "World"}
+    return RedirectResponse("/docs")

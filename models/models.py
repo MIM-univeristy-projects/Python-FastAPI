@@ -8,8 +8,11 @@ from sqlmodel import Field, SQLModel
 
 
 class FriendshipStatusEnum(str, enum.Enum):
-    BUDDY = "buddy"
-    STRANGER = "stranger"
+    """Statusy relacji znajomości."""
+
+    PENDING = "pending"
+    ACCEPTED = "accepted"
+    DECLINED = "declined"
 
 
 class UserRole(str, enum.Enum):
@@ -93,8 +96,17 @@ class Friendship(SQLModel, table=True):
     requester_id: int = Field(foreign_key="user.id")
     addressee_id: int = Field(foreign_key="user.id")
     status: str = Field(
-        sa_column=Column(SAEnum(FriendshipStatusEnum)), default=FriendshipStatusEnum.STRANGER
+        sa_column=Column(SAEnum(FriendshipStatusEnum)), default=FriendshipStatusEnum.PENDING
     )
+
+
+class FriendshipResponse(BaseModel):
+    """Friendship response model."""
+
+    id: int
+    requester_id: int
+    addressee_id: int
+    status: FriendshipStatusEnum
 
 
 class PostLikes(

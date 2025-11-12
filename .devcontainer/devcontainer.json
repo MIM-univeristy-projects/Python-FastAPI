@@ -22,7 +22,8 @@
 				"DavidAnson.vscode-markdownlint",
 				"bradlc.vscode-tailwindcss",
 				"cweijan.vscode-database-client2",
-				"github.vscode-github-actions"
+				"github.vscode-github-actions",
+				"streetsidesoftware.code-spell-checker-polish"
 			],
 			"settings": {
 				"python.defaultInterpreterPath": ".venv"
