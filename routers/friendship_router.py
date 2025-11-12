@@ -1,183 +1,205 @@
 import http
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlmodel import Session
 
 from database.database import get_session
-from models.models import Friendship, FriendshipResponse, FriendshipStatusEnum, User
-from repositories import friendship_repo
-from services.security import get_current_active_user
+from models.models import (
+    Friendship,
+    FriendshipResponse,
+    FriendshipStatusEnum,
+    User,
+    UserResponse,
+)
+from repositories.friendship_repo import (
+    create_friendship,
+    # === NOWE IMPORTY ===
+    get_accepted_friends,
+    get_accepted_friendship,
+    get_friendship_any_status,
+    get_pending_friendship,
+    get_received_pending_requests,
+    get_sent_pending_requests,
+    update_friendship,
+)
+from repositories.user_repo import get_user_by_id
+from services.security import get_current_active_user, get_current_user
 
-router = APIRouter(prefix="/friends", tags=["friends"])
+router = APIRouter(tags=["Friendships"])
 
-session: Session = Depends(get_session)
-current_user: User = Depends(get_current_active_user)
+current_user = Depends(get_current_user)
+session = Depends(get_session)
+current_active_user = Depends(get_current_active_user)
 
 
-@router.post("/request/{addressee_id}", response_model=FriendshipResponse)
+@router.post(
+    "/friends/request/{addressee_id}",
+    response_model=FriendshipResponse,
+    status_code=status.HTTP_201_CREATED,
+)
 def send_friend_request(
     addressee_id: int,
-    session: Session = session,
     current_user: User = current_user,
+    session: Session = session,
 ):
-    """Wysyła zaproszenie do znajomych."""
-    if current_user.id is None:
+    """Wysyła zaproszenie do znajomych do użytkownika o podanym ID."""
+    if addressee_id == current_user.id:
         raise HTTPException(
-            status_code=http.HTTPStatus.UNAUTHORIZED, detail="Could not identify current user"
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Nie można wysłać zaproszenia do samego siebie.",
         )
 
-    # 1. Sprawdź, czy użytkownik nie zaprasza samego siebie
-    if current_user.id == addressee_id:
-        raise HTTPException(
-            status_code=http.HTTPStatus.BAD_REQUEST, detail="Cannot send friend request to yourself"
-        )
-
-    # 2. Sprawdź, czy użytkownik, którego zapraszasz, istnieje
-    addressee = session.get(User, addressee_id)
+    addressee = get_user_by_id(session, addressee_id)
     if not addressee:
-        raise HTTPException(status_code=http.HTTPStatus.NOT_FOUND, detail="User to add not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Użytkownik nie istnieje."
+        )
 
-    # 3. Sprawdź, czy relacja już nie istnieje (używając funkcji z repo)
-    existing_friendship = friendship_repo.get_friendship_any_status(
-        session=session, user1_id=current_user.id, user2_id=addressee_id
-    )
+    if not current_user.id:
+        raise HTTPException(
+            status_code=http.HTTPStatus.INTERNAL_SERVER_ERROR, detail="User missing id identifier"
+        )
 
+    existing_friendship = get_friendship_any_status(session, current_user.id, addressee_id)
     if existing_friendship:
         if existing_friendship.status == FriendshipStatusEnum.ACCEPTED:
-            detail = "Users are already friends"
+            detail = "Jesteście już znajomymi."
         elif existing_friendship.status == FriendshipStatusEnum.PENDING:
-            detail = "Friendship request already pending"
-        else:
-            if existing_friendship.status == FriendshipStatusEnum.DECLINED:
-                existing_friendship.status = FriendshipStatusEnum.PENDING
-                existing_friendship.requester_id = current_user.id
-                existing_friendship.addressee_id = addressee_id
-                updated_friendship = friendship_repo.update_friendship(
-                    session=session, friendship=existing_friendship
-                )
-                return updated_friendship
+            detail = "Zaproszenie zostało już wysłane."
+        else:  # DECLINED
+            detail = "Użytkownik odrzucił już Twoje zaproszenie."
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=detail)
 
-            detail = "Friendship relationship already exists"
-
-        raise HTTPException(
-            status_code=http.HTTPStatus.BAD_REQUEST,
-            detail=detail,
-        )
-
-    # 4. Stwórz nową relację
     new_friendship = Friendship(
         requester_id=current_user.id,
         addressee_id=addressee_id,
         status=FriendshipStatusEnum.PENDING,
     )
-
-    created_friendship = friendship_repo.create_friendship(
-        session=session, friendship=new_friendship
-    )
+    created_friendship = create_friendship(session, new_friendship)
     return created_friendship
 
 
-@router.put("/accept/{requester_id}", response_model=FriendshipResponse)
+@router.post("/friends/accept/{requester_id}", response_model=FriendshipResponse)
 def accept_friend_request(
     requester_id: int,
+    current_user: User = current_active_user,
     session: Session = session,
-    current_user: User = current_user,
 ):
-    """Akceptuje zaproszenie do znajomych."""
-    if current_user.id is None:
+    if not current_user.id:
         raise HTTPException(
-            status_code=http.HTTPStatus.UNAUTHORIZED, detail="Could not identify current user"
+            status_code=http.HTTPStatus.INTERNAL_SERVER_ERROR, detail="User missing id identifier"
         )
 
-    # 1. Znajdź oczekujące zaproszenie
-    pending_friendship = friendship_repo.get_pending_friendship(
-        session=session, requester_id=requester_id, addressee_id=current_user.id
+    """Akceptuje zaproszenie do znajomych od użytkownika o podanym ID."""
+    pending_request = get_pending_friendship(
+        session, requester_id=requester_id, addressee_id=current_user.id
     )
-
-    # 2. Sprawdź, czy zaproszenie istnieje
-    if not pending_friendship:
+    if not pending_request:
         raise HTTPException(
-            status_code=http.HTTPStatus.NOT_FOUND, detail="No pending friend request found"
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Nie znaleziono oczekującego zaproszenia od tego użytkownika.",
         )
 
-    # 3. Zmień status na ACCEPTED
-    pending_friendship.status = FriendshipStatusEnum.ACCEPTED
-
-    # 4. Zaktualizuj wpis w bazie danych
-    updated_friendship = friendship_repo.update_friendship(
-        session=session, friendship=pending_friendship
-    )
-
+    pending_request.status = FriendshipStatusEnum.ACCEPTED
+    updated_friendship = update_friendship(session, pending_request)
     return updated_friendship
 
 
-@router.put("/decline/{requester_id}", response_model=FriendshipResponse)
+@router.post("/friends/decline/{requester_id}", response_model=FriendshipResponse)
 def decline_friend_request(
     requester_id: int,
+    current_user: User = current_active_user,
     session: Session = session,
-    current_user: User = current_user,
 ):
-    """Odrzuca zaproszenie do znajomych."""
-    if current_user.id is None:
+    if not current_user.id:
         raise HTTPException(
-            status_code=http.HTTPStatus.UNAUTHORIZED, detail="Could not identify current user"
+            status_code=http.HTTPStatus.INTERNAL_SERVER_ERROR, detail="User missing id identifier"
         )
 
-    # 1. Znajdź oczekujące zaproszenie
-    pending_friendship = friendship_repo.get_pending_friendship(
-        session=session, requester_id=requester_id, addressee_id=current_user.id
+    """Odrzuca zaproszenie do znajomych od użytkownika o podanym ID."""
+    pending_request = get_pending_friendship(
+        session, requester_id=requester_id, addressee_id=current_user.id
     )
-
-    # 2. Sprawdź, czy zaproszenie istnieje
-    if not pending_friendship:
+    if not pending_request:
         raise HTTPException(
-            status_code=http.HTTPStatus.NOT_FOUND, detail="No pending friend request found"
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Nie znaleziono oczekującego zaproszenia od tego użytkownika.",
         )
 
-    # 3. Zmień status na DECLINED
-    pending_friendship.status = FriendshipStatusEnum.DECLINED
-
-    # 4. Zaktualizuj wpis w bazie danych
-    updated_friendship = friendship_repo.update_friendship(
-        session=session, friendship=pending_friendship
-    )
-
+    pending_request.status = FriendshipStatusEnum.DECLINED
+    updated_friendship = update_friendship(session, pending_request)
     return updated_friendship
 
 
-@router.delete("/remove/{friend_id}", response_model=FriendshipResponse)
+@router.delete("/friends/remove/{friend_id}", status_code=status.HTTP_204_NO_CONTENT)
 def remove_friend(
     friend_id: int,
+    current_user: User = current_active_user,
     session: Session = session,
-    current_user: User = current_user,
 ):
-    """Usuwa znajomego (zmienia status relacji)."""
-    if current_user.id is None:
+    if not current_user.id:
         raise HTTPException(
-            status_code=http.HTTPStatus.UNAUTHORIZED, detail="Could not identify current user"
+            status_code=http.HTTPStatus.INTERNAL_SERVER_ERROR, detail="User missing id identifier"
         )
 
-    # 1. Sprawdź, czy użytkownik nie usuwa samego siebie
-    if current_user.id == friend_id:
-        raise HTTPException(
-            status_code=http.HTTPStatus.BAD_REQUEST, detail="Cannot remove yourself"
-        )
-
-    # 2. Znajdź zaakceptowaną relację między zalogowanym użytkownikiem a friend_id
-    accepted_friendship = friendship_repo.get_accepted_friendship(
-        session=session, user1_id=current_user.id, user2_id=friend_id
+    """Usuwa znajomego (anuluje przyjaźń)."""
+    accepted_friendship = get_accepted_friendship(
+        session, user1_id=current_user.id, user2_id=friend_id
     )
-
-    # 3. Sprawdź, czy taka relacja istnieje
     if not accepted_friendship:
-        raise HTTPException(status_code=http.HTTPStatus.NOT_FOUND, detail="Friendship not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Nie jesteście znajomymi.",
+        )
 
-    # 4. Zmień status, aby "usunąć" przyjaźń
-    accepted_friendship.status = FriendshipStatusEnum.DECLINED
+    session.delete(accepted_friendship)
+    session.commit()
+    return
 
-    # 5. Zaktualizuj wpis w bazie
-    updated_friendship = friendship_repo.update_friendship(
-        session=session, friendship=accepted_friendship
-    )
 
-    return updated_friendship
+# === NOWE ENDPOINT'Y GET ===
+
+
+@router.get("/friends/", response_model=list[UserResponse])
+def read_friends(
+    current_user: User = current_active_user,
+    session: Session = session,
+):
+    if not current_user.id:
+        raise HTTPException(
+            status_code=http.HTTPStatus.INTERNAL_SERVER_ERROR, detail="User missing id identifier"
+        )
+
+    """Pobiera listę zaakceptowanych znajomych."""
+    friends_list = get_accepted_friends(session=session, user_id=current_user.id)
+    return friends_list
+
+
+@router.get("/friends/pending", response_model=list[UserResponse])
+def read_pending_requests(
+    current_user: User = current_active_user,
+    session: Session = session,
+):
+    if not current_user.id:
+        raise HTTPException(
+            status_code=http.HTTPStatus.INTERNAL_SERVER_ERROR, detail="User missing id identifier"
+        )
+
+    """Pobiera listę otrzymanych, oczekujących zaproszeń do znajomych."""
+    pending_list = get_received_pending_requests(session=session, user_id=current_user.id)
+    return pending_list
+
+
+@router.get("/friends/sent", response_model=list[UserResponse])
+def read_sent_requests(
+    current_user: User = current_active_user,
+    session: Session = session,
+):
+    if not current_user.id:
+        raise HTTPException(
+            status_code=http.HTTPStatus.INTERNAL_SERVER_ERROR, detail="User missing id identifier"
+        )
+
+    """Pobiera listę wysłanych, oczekujących zaproszeń do znajomych."""
+    sent_list = get_sent_pending_requests(session=session, user_id=current_user.id)
+    return sent_list

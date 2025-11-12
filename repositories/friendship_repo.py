@@ -1,6 +1,6 @@
 from sqlmodel import Session, or_, select
 
-from models.models import Friendship, FriendshipStatusEnum
+from models.models import Friendship, FriendshipStatusEnum, User
 
 
 def get_friendship_any_status(session: Session, user1_id: int, user2_id: int) -> Friendship | None:
@@ -52,3 +52,67 @@ def update_friendship(session: Session, friendship: Friendship) -> Friendship:
     session.commit()
     session.refresh(friendship)
     return friendship
+
+
+# === NOWE FUNKCJE ===
+
+
+def get_accepted_friends(session: Session, user_id: int) -> list[User]:
+    """Pobiera listę zaakceptowanych znajomych dla danego użytkownika."""
+
+    # 1. Użytkownicy, do których 'user_id' wysłał zaproszenie i zostało zaakceptowane
+    statement1 = (
+        select(User)
+        .join(Friendship, User.id == Friendship.addressee_id)  # type: ignore
+        .where(
+            Friendship.requester_id == user_id,
+            Friendship.status == FriendshipStatusEnum.ACCEPTED,
+        )
+    )
+
+    # 2. Użytkownicy, od których 'user_id' otrzymał zaproszenie i je zaakceptował
+    statement2 = (
+        select(User)
+        .join(Friendship, User.id == Friendship.requester_id)  # type: ignore
+        .where(
+            Friendship.addressee_id == user_id,
+            Friendship.status == FriendshipStatusEnum.ACCEPTED,
+        )
+    )
+
+    friends_as_requester = session.exec(statement1).all()
+    friends_as_addressee = session.exec(statement2).all()
+
+    return list(friends_as_requester) + list(friends_as_addressee)
+
+
+def get_received_pending_requests(session: Session, user_id: int) -> list[User]:
+    """
+    Pobiera listę użytkowników (zapraszających),
+    od których 'user_id' otrzymał oczekujące zaproszenia.
+    """
+    statement = (
+        select(User)
+        .join(Friendship, User.id == Friendship.requester_id)  # type: ignore
+        .where(
+            Friendship.addressee_id == user_id,
+            Friendship.status == FriendshipStatusEnum.PENDING,
+        )
+    )
+    return list(session.exec(statement).all())
+
+
+def get_sent_pending_requests(session: Session, user_id: int) -> list[User]:
+    """
+    Pobiera listę użytkowników (zaproszonych),
+    do których 'user_id' wysłał oczekujące zaproszenia.
+    """
+    statement = (
+        select(User)
+        .join(Friendship, User.id == Friendship.addressee_id)  # type: ignore
+        .where(
+            Friendship.requester_id == user_id,
+            Friendship.status == FriendshipStatusEnum.PENDING,
+        )
+    )
+    return list(session.exec(statement).all())
