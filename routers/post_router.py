@@ -40,6 +40,10 @@ def read_post_with_author(post_id: int, session: Session = session) -> PostReadW
         raise HTTPException(status_code=404, detail="Post or author not found")
 
     post, author = result
+
+    if not post.id:
+        raise HTTPException(status_code=500, detail="Post ID is missing")
+
     return PostReadWithAuthor(
         id=post.id,
         text=post.text,

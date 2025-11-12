@@ -6,7 +6,7 @@ from sqlmodel import Session, SQLModel, select
 
 from database.database import engine
 from models.models import User, UserRole
-from routers import admin_router, auth_routes, user_router
+from routers import admin_router, auth_routes, post_router, user_router
 from services.security import get_password_hash
 
 
@@ -56,6 +56,7 @@ app = FastAPI(lifespan=lifespan)
 app.include_router(user_router.router)
 app.include_router(admin_router.router)
 app.include_router(auth_routes.router)
+app.include_router(post_router.router)
 
 origins: list[str] = [
     "http://localhost",

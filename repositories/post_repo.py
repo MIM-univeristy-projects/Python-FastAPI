@@ -1,11 +1,11 @@
-from sqlmodel import Session, select
+from sqlmodel import Session, desc, select
 
 from models.models import Post, User
 
 
 def get_all_posts(session: Session) -> list[Post]:
-    """Get all posts."""
-    statement = select(Post)
+    """Get all posts ordered by newest first."""
+    statement = select(Post).order_by(desc(Post.created_at))
     return list(session.exec(statement).all())
 
 
