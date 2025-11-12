@@ -141,3 +141,11 @@ class Messages(SQLModel, table=True):
     content: str = Field(sa_column=Column(TEXT))
     sender_id: int = Field(foreign_key="user.id")
     conversation_id: int = Field(foreign_key="conversation.id")
+
+
+class PostReadWithAuthor(BaseModel):
+    id: int
+    text: str
+    author_id: int
+    created_at: datetime
+    author: User
