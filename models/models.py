@@ -82,6 +82,7 @@ class Comments(SQLModel, table=True):
     content: str = Field(sa_column=Column(TEXT))
     author_id: int = Field(foreign_key="user.id")
     post_id: int = Field(foreign_key="post.id")
+    created_at: datetime = Field(default=datetime.now(UTC))
 
 
 class Conversation(SQLModel, table=True):
@@ -185,6 +186,18 @@ class PostLikesResponse(BaseModel):
 
     likes_count: int
     liked_by_current_user: bool
+
+
+# Comment models
+class CommentResponse(BaseModel):
+    """Response model for comment with author information."""
+
+    id: int
+    content: str
+    author_id: int
+    post_id: int
+    created_at: datetime
+    author: User
 
 
 # ============================================================================

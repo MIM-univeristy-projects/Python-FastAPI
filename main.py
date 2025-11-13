@@ -7,7 +7,7 @@ from sqlmodel import Session, SQLModel, select
 
 from database.database import engine
 from models.models import Post, User, UserRole
-from routers import admin_router, auth_routes, friendship_router, post_router, user_router
+from routers import admin_router, auth_routes, comment_router, friendship_router, post_router, user_router
 from services.security import get_password_hash
 from utils.logging import logger
 
@@ -161,6 +161,7 @@ app.include_router(user_router.router)
 app.include_router(admin_router.router)
 app.include_router(auth_routes.router)
 app.include_router(post_router.router)
+app.include_router(comment_router.router)
 app.include_router(friendship_router.router)
 
 origins: list[str] = [
