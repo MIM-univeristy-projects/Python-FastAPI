@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlmodel import Session
 
 from database.database import get_session
@@ -28,7 +28,7 @@ def read_post(post_id: int, session: Session = session) -> Post:
     """Get a post by ID."""
     post = get_post_by_id(session, post_id)
     if not post:
-        raise HTTPException(status_code=404, detail="Post not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Post not found")
     return post
 
 
@@ -37,12 +37,16 @@ def read_post_with_author(post_id: int, session: Session = session) -> PostReadW
     """Get a post by ID with author information."""
     result = get_post_with_author(session, post_id)
     if not result:
-        raise HTTPException(status_code=404, detail="Post or author not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Post or author not found"
+        )
 
     post, author = result
 
     if not post.id:
-        raise HTTPException(status_code=500, detail="Post ID is missing")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Post ID is missing"
+        )
 
     return PostReadWithAuthor(
         id=post.id,

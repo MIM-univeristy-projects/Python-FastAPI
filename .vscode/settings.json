@@ -1,10 +1,11 @@
 {
     "cSpell.words": [
         "poolclass",
+        "pwdlib",
         "venv"
     ],
     "python.analysis.autoImportCompletions": true,
-    "python.analysis.typeCheckingMode": "standard",
+    "python.analysis.typeCheckingMode": "strict",
     "[python]": {
         "editor.formatOnSave": true,
         "editor.formatOnPaste": true,

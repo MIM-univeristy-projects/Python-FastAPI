@@ -1,5 +1,3 @@
-import http
-
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlmodel import Session
 
@@ -13,7 +11,6 @@ from models.models import (
 )
 from repositories.friendship_repo import (
     create_friendship,
-    # === NOWE IMPORTY ===
     get_accepted_friends,
     get_accepted_friendship,
     get_friendship_any_status,
@@ -24,6 +21,7 @@ from repositories.friendship_repo import (
 )
 from repositories.user_repo import get_user_by_id
 from services.security import get_current_active_user, get_current_user
+from utils.logging import logger
 
 router = APIRouter(tags=["Friendships"])
 
@@ -41,7 +39,7 @@ def send_friend_request(
     addressee_id: int,
     current_user: User = current_user,
     session: Session = session,
-):
+) -> Friendship:
     """Wysyła zaproszenie do znajomych do użytkownika o podanym ID."""
     if addressee_id == current_user.id:
         raise HTTPException(
@@ -56,8 +54,9 @@ def send_friend_request(
         )
 
     if not current_user.id:
+        logger.error("User missing id identifier")
         raise HTTPException(
-            status_code=http.HTTPStatus.INTERNAL_SERVER_ERROR, detail="User missing id identifier"
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="User missing id identifier"
         )
 
     existing_friendship = get_friendship_any_status(session, current_user.id, addressee_id)
@@ -66,7 +65,7 @@ def send_friend_request(
             detail = "Jesteście już znajomymi."
         elif existing_friendship.status == FriendshipStatusEnum.PENDING:
             detail = "Zaproszenie zostało już wysłane."
-        else:  # DECLINED
+        else:
             detail = "Użytkownik odrzucił już Twoje zaproszenie."
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=detail)
 
@@ -87,7 +86,7 @@ def accept_friend_request(
 ):
     if not current_user.id:
         raise HTTPException(
-            status_code=http.HTTPStatus.INTERNAL_SERVER_ERROR, detail="User missing id identifier"
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="User missing id identifier"
         )
 
     """Akceptuje zaproszenie do znajomych od użytkownika o podanym ID."""
@@ -113,7 +112,7 @@ def decline_friend_request(
 ):
     if not current_user.id:
         raise HTTPException(
-            status_code=http.HTTPStatus.INTERNAL_SERVER_ERROR, detail="User missing id identifier"
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="User missing id identifier"
         )
 
     """Odrzuca zaproszenie do znajomych od użytkownika o podanym ID."""
@@ -139,7 +138,7 @@ def remove_friend(
 ):
     if not current_user.id:
         raise HTTPException(
-            status_code=http.HTTPStatus.INTERNAL_SERVER_ERROR, detail="User missing id identifier"
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="User missing id identifier"
         )
 
     """Usuwa znajomego (anuluje przyjaźń)."""
@@ -167,7 +166,7 @@ def read_friends(
 ):
     if not current_user.id:
         raise HTTPException(
-            status_code=http.HTTPStatus.INTERNAL_SERVER_ERROR, detail="User missing id identifier"
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="User missing id identifier"
         )
 
     """Pobiera listę zaakceptowanych znajomych."""
@@ -182,7 +181,7 @@ def read_pending_requests(
 ):
     if not current_user.id:
         raise HTTPException(
-            status_code=http.HTTPStatus.INTERNAL_SERVER_ERROR, detail="User missing id identifier"
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="User missing id identifier"
         )
 
     """Pobiera listę otrzymanych, oczekujących zaproszeń do znajomych."""
@@ -197,7 +196,7 @@ def read_sent_requests(
 ):
     if not current_user.id:
         raise HTTPException(
-            status_code=http.HTTPStatus.INTERNAL_SERVER_ERROR, detail="User missing id identifier"
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="User missing id identifier"
         )
 
     """Pobiera listę wysłanych, oczekujących zaproszeń do znajomych."""

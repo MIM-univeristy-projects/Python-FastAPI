@@ -1,6 +1,4 @@
-import http
-
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlmodel import Session, select
 
 from database.database import get_session
@@ -35,5 +33,5 @@ def read_user_by_username(
     if not user:
         user = get_user_by_email(session, identifier)
         if not user:
-            raise HTTPException(status_code=http.HTTPStatus.NOT_FOUND, detail="User not found")
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
     return user

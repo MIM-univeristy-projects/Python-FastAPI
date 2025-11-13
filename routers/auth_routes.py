@@ -1,13 +1,13 @@
-import http
 from datetime import timedelta
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlmodel import Session
 
 from database.database import get_session
 from models.models import TokenResponse, UserResponse
 from services.security import ACCESS_TOKEN_EXPIRE_MINUTES, authenticate_user, create_access_token
+from utils.logging import logger
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -16,7 +16,8 @@ session: Session = Depends(get_session)
 
 @router.post("/token", response_model=TokenResponse)
 async def login(
-    form_data: OAuth2PasswordRequestForm = Depends(), session: Session = session
+    form_data: OAuth2PasswordRequestForm = Depends(),  # noqa: B008
+    session: Session = session,
 ) -> TokenResponse:
     """
     OAuth2 compatible token login. Use username and password to get an access token.
@@ -26,8 +27,11 @@ async def login(
     """
     user = authenticate_user(session, form_data.username, form_data.password)
     if not user:
+        logger.warning(
+            f"Failed login attempt for username: {form_data.username}. Error: Invalid credentials."
+        )
         raise HTTPException(
-            status_code=http.HTTPStatus.UNAUTHORIZED,
+            status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect username or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
@@ -37,8 +41,9 @@ async def login(
     )
 
     if user.id is None:
+        logger.error(f"User ID not found for username: {form_data.username}")
         raise HTTPException(
-            status_code=http.HTTPStatus.INTERNAL_SERVER_ERROR,
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="User ID not found",
         )
 

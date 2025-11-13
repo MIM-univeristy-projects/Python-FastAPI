@@ -1,8 +1,7 @@
-import http
 import re
 import string
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlmodel import Session
 
@@ -18,14 +17,15 @@ from services.security import (
 router = APIRouter(prefix="/users", tags=["users"])
 
 session: Session = Depends(get_session)
+active_user = Depends(get_current_active_user)
 
 
-def is_valid_email(email):
+def is_valid_email(email: str) -> bool:
     pattern = r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
     return re.match(pattern, email) is not None
 
 
-def is_valid_password(password: str):
+def is_valid_password(password: str) -> bool:
     has_upper = any(ch.isupper() for ch in password)
     has_special = any(ch in string.punctuation for ch in password)
     long_enough = len(password) >= 8
@@ -35,24 +35,25 @@ def is_valid_password(password: str):
 
 @router.post("/register", response_model=TokenResponse)
 async def register_user(user: UserCreate, session: Session = session):
+    """Register a new user and return an access token."""
     valid_email = is_valid_email(user.email)
     if not valid_email:
-        raise HTTPException(status_code=http.HTTPStatus.BAD_REQUEST, detail="Incorrect Email")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Incorrect Email")
     valid_password = is_valid_password(user.password)
     if not valid_password:
         raise HTTPException(
-            status_code=http.HTTPStatus.BAD_REQUEST,
-            detail="Password must have: 8 characters, a special character and an uppercase letter",
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Password must have: min. 8 characters, a special "
+            "character and an uppercase letter",
         )
     user_from_database = get_user_by_username(session=session, username=user.username)
     if user_from_database:
         raise HTTPException(
-            status_code=http.HTTPStatus.BAD_REQUEST, detail="Username already exists"
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Username already exists"
         )
     user_from_database = get_user_by_email(session=session, email=user.email)
     if user_from_database:
-        raise HTTPException(status_code=http.HTTPStatus.BAD_REQUEST, detail="Email already exists")
-
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email already exists")
     user_create = User(
         email=user.email,
         username=user.username,
@@ -65,7 +66,7 @@ async def register_user(user: UserCreate, session: Session = session):
     created_user: User | None = create_user(session=session, user=user_create)
     if not created_user:
         raise HTTPException(
-            status_code=http.HTTPStatus.INTERNAL_SERVER_ERROR, detail="User could not be created"
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="User could not be created"
         )
 
     return await login(
@@ -82,6 +83,6 @@ async def register_user(user: UserCreate, session: Session = session):
 
 
 @router.get("/me", response_model=UserResponse)
-async def read_users_me(current_user: User = Depends(get_current_active_user)):
+async def read_users_me(current_user: User = active_user):
     """Get current authenticated user information. Returns user data including role."""
     return current_user
