@@ -4,15 +4,11 @@ from datetime import UTC, datetime
 from pydantic import BaseModel
 from sqlalchemy import TEXT, Column
 from sqlalchemy import Enum as SAEnum
-from sqlmodel import Field, SQLModel
+from sqlmodel import Field, SQLModel  # type: ignore
 
-
-class FriendshipStatusEnum(str, enum.Enum):
-    """Statusy relacji znajomości."""
-
-    PENDING = "pending"
-    ACCEPTED = "accepted"
-    DECLINED = "declined"
+# ============================================================================
+# ENUMERATIONS
+# ============================================================================
 
 
 class UserRole(str, enum.Enum):
@@ -20,6 +16,19 @@ class UserRole(str, enum.Enum):
 
     USER = "user"
     ADMIN = "admin"
+
+
+class FriendshipStatusEnum(str, enum.Enum):
+    """Friendship status enumeration."""
+
+    PENDING = "pending"
+    ACCEPTED = "accepted"
+    DECLINED = "declined"
+
+
+# ============================================================================
+# DATABASE MODELS (SQLModel with table=True)
+# ============================================================================
 
 
 class User(SQLModel, table=True):
@@ -36,6 +45,75 @@ class User(SQLModel, table=True):
     created_at: datetime = Field(default=datetime.now(UTC))
 
 
+class Post(SQLModel, table=True):
+    """Post model for storing user posts."""
+
+    id: int | None = Field(default=None, primary_key=True)
+    text: str = Field(sa_column=Column(TEXT))
+    author_id: int = Field(foreign_key="user.id")
+    created_at: datetime = Field(default=datetime.now(UTC))
+
+
+class Friendship(SQLModel, table=True):
+    """Friendship model for managing user friendships."""
+
+    id: int | None = Field(default=None, primary_key=True)
+    requester_id: int = Field(foreign_key="user.id")
+    addressee_id: int = Field(foreign_key="user.id")
+    status: str = Field(
+        sa_column=Column(SAEnum(FriendshipStatusEnum)), default=FriendshipStatusEnum.PENDING
+    )
+
+
+class PostLikes(SQLModel, table=True):
+    """PostLikes model for managing likes on posts."""
+
+    __tablename__ = "post_likes"  # type: ignore
+    id: int | None = Field(default=None, primary_key=True)
+    text: str = Field(sa_column=Column(TEXT))
+    user_id: int = Field(foreign_key="user.id")
+    post_id: int = Field(foreign_key="post.id")
+
+
+class Comments(SQLModel, table=True):
+    """Comments model for storing comments on posts."""
+
+    id: int | None = Field(default=None, primary_key=True)
+    content: str = Field(sa_column=Column(TEXT))
+    author_id: int = Field(foreign_key="user.id")
+    post_id: int = Field(foreign_key="post.id")
+
+
+class Conversation(SQLModel, table=True):
+    """Conversation model for managing conversations."""
+
+    id: int | None = Field(default=None, primary_key=True)
+    title: str
+
+
+class ConversationParticipants(SQLModel, table=True):
+    """ConversationParticipants model for managing conversation participants."""
+
+    id: int | None = Field(default=None, primary_key=True)
+    user_id: int = Field(foreign_key="user.id")
+    conversation_id: int = Field(foreign_key="conversation.id")
+
+
+class Messages(SQLModel, table=True):
+    """Messages model for managing messages in conversations."""
+
+    id: int | None = Field(default=None, primary_key=True)
+    content: str = Field(sa_column=Column(TEXT))
+    sender_id: int = Field(foreign_key="user.id")
+    conversation_id: int = Field(foreign_key="conversation.id")
+
+
+# ============================================================================
+# REQUEST/RESPONSE MODELS (Pydantic BaseModel)
+# ============================================================================
+
+
+# User-related models
 class UserCreate(BaseModel):
     """User creation model for user registration."""
 
@@ -59,6 +137,7 @@ class UserResponse(BaseModel):
     created_at: datetime
 
 
+# Authentication models
 class Token(BaseModel):
     """Token model for authentication responses."""
 
@@ -80,26 +159,7 @@ class TokenData(BaseModel):
     username: str | None = None
 
 
-class Post(SQLModel, table=True):
-    """Post model for storing posts."""
-
-    id: int | None = Field(default=None, primary_key=True)
-    text: str = Field(sa_column=Column(TEXT))
-    author_id: int = Field(foreign_key="user.id")
-    created_at: datetime = Field(default=datetime.now(UTC))
-
-
-class Friendship(SQLModel, table=True):
-    """Friendship model for managing user friendships."""
-
-    id: int | None = Field(default=None, primary_key=True)
-    requester_id: int = Field(foreign_key="user.id")
-    addressee_id: int = Field(foreign_key="user.id")
-    status: str = Field(
-        sa_column=Column(SAEnum(FriendshipStatusEnum)), default=FriendshipStatusEnum.PENDING
-    )
-
-
+# Friendship models
 class FriendshipResponse(BaseModel):
     """Friendship response model."""
 
@@ -109,55 +169,34 @@ class FriendshipResponse(BaseModel):
     status: FriendshipStatusEnum
 
 
-class PostLikes(
-    SQLModel,
-    table=True,
-):
-    """PostLikes model for managing likes on posts."""
-
-    __tablename__ = "post_likes"  # type: ignore
-    id: int | None = Field(default=None, primary_key=True)
-    text: str = Field(sa_column=Column(TEXT))
-    user_id: int = Field(foreign_key="user.id")
-    post_id: int = Field(foreign_key="post.id")
-
-
-class Conversation(SQLModel, table=True):
-    """Conversation model for managing conversations."""
-
-    id: int | None = Field(default=None, primary_key=True)
-    title: str
-
-
-class ConversationParticipants(SQLModel, table=True):
-    """ConversationParticipants model for managing conversation participants."""
-
-    id: int | None = Field(default=None, primary_key=True)
-    user_id: int = Field(foreign_key="user.id")
-    conversation_id: int = Field(foreign_key="conversation.id")
-
-
-class Comments(SQLModel, table=True):
-    """Comments model for storing comments on posts."""
-
-    id: int | None = Field(default=None, primary_key=True)
-    content: str = Field(sa_column=Column(TEXT))
-    author_id: int = Field(foreign_key="user.id")
-    post_id: int = Field(foreign_key="post.id")
-
-
-class Messages(SQLModel, table=True):
-    """Messages model for managing messages in conversations."""
-
-    id: int | None = Field(default=None, primary_key=True)
-    content: str = Field(sa_column=Column(TEXT))
-    sender_id: int = Field(foreign_key="user.id")
-    conversation_id: int = Field(foreign_key="conversation.id")
-
-
+# Post models
 class PostReadWithAuthor(BaseModel):
+    """Post model with author information included."""
+
     id: int
     text: str
     author_id: int
     created_at: datetime
     author: User
+
+
+# ============================================================================
+# TEST FIXTURE MODELS
+# ============================================================================
+
+
+class AuthenticatedUser(BaseModel):
+    """Model for authenticated user with token and headers (used in tests)."""
+
+    user: User
+    token: str
+    headers: dict[str, str]
+
+
+class FriendshipScenario(BaseModel):
+    """Model for friendship test scenario with user IDs (used in tests)."""
+
+    user_a_id: int
+    user_b_id: int
+    user_c_id: int
+    user_d_id: int
