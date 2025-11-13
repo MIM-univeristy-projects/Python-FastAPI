@@ -13,7 +13,9 @@ def create_comment(session: Session, comment: Comments) -> Comments:
 
 def get_comments_by_post(session: Session, post_id: int) -> list[Comments]:
     """Get all comments for a specific post, ordered by newest first."""
-    statement = select(Comments).where(Comments.post_id == post_id).order_by(desc(Comments.created_at))
+    statement = (
+        select(Comments).where(Comments.post_id == post_id).order_by(desc(Comments.created_at))
+    )
     return list(session.exec(statement).all())
 
 

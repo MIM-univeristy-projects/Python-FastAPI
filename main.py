@@ -7,7 +7,14 @@ from sqlmodel import Session, SQLModel, select
 
 from database.database import engine
 from models.models import Post, User, UserRole
-from routers import admin_router, auth_routes, comment_router, friendship_router, post_router, user_router
+from routers import (
+    admin_router,
+    auth_routes,
+    comment_router,
+    friendship_router,
+    post_router,
+    user_router,
+)
 from services.security import get_password_hash
 from utils.logging import logger
 
@@ -87,7 +94,8 @@ def create_sample_posts(session: Session) -> None:
 
     sample_posts = [
         Post(
-            text="Wspólne gotowanie w kuchni na korytarzu to najlepsza forma integracji! Ktoś ma przepis na dobry makaron? 🍝",
+            text="Wspólne gotowanie w kuchni na korytarzu to najlepsza forma integracji! "
+            "Ktoś ma przepis na dobry makaron? 🍝",
             author_id=testuser.id,
         ),
         Post(
@@ -95,7 +103,8 @@ def create_sample_posts(session: Session) -> None:
             author_id=testuser2.id,
         ),
         Post(
-            text="Dzisiaj sprzątanie wspólnej kuchni - dzięki wszystkim za pomoc! Razem jest lepiej",
+            text="Dzisiaj sprzątanie wspólnej kuchni - "
+            "dzięki wszystkim za pomoc! Razem jest lepiej",
             author_id=testuser.id,
         ),
         Post(

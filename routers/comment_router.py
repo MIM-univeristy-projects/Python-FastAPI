@@ -3,7 +3,7 @@ from pydantic import BaseModel
 from sqlmodel import Session
 
 from database.database import get_session
-from models.models import Comments, CommentResponse, User
+from models.models import CommentResponse, Comments, User
 from repositories.comment_repo import (
     create_comment,
     delete_comment,
