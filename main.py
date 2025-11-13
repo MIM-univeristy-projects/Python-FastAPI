@@ -6,7 +6,7 @@ from fastapi.responses import RedirectResponse
 from sqlmodel import Session, SQLModel, select
 
 from database.database import engine
-from models.models import User, UserRole
+from models.models import Post, User, UserRole
 from routers import admin_router, auth_routes, friendship_router, post_router, user_router
 from services.security import get_password_hash
 from utils.logging import logger
@@ -61,6 +61,56 @@ def create_user_if_not_exists(
     return user
 
 
+def create_sample_posts(session: Session) -> None:
+    """
+    Create sample posts for testing if they don't already exist.
+
+    Args:
+        session: Database session
+    """
+    existing_posts = session.exec(select(Post)).all()
+    if existing_posts:
+        logger.info(f"{len(existing_posts)} posts already exist. Skipping sample post creation.")
+        return
+
+    testuser = session.exec(select(User).where(User.username == "testuser")).one_or_none()
+    testuser2 = session.exec(select(User).where(User.username == "testuser2")).one_or_none()
+    admin = session.exec(select(User).where(User.username == "admin")).one_or_none()
+
+    if not testuser or not testuser2 or not admin:
+        logger.warning("Cannot create sample posts: required users not found.")
+        return
+
+    if not testuser.id or not testuser2.id or not admin.id:
+        logger.warning("Cannot create sample posts: user IDs are missing.")
+        return
+
+    sample_posts = [
+        Post(
+            text="Wspólne gotowanie w kuchni na korytarzu to najlepsza forma integracji! Ktoś ma przepis na dobry makaron? 🍝",
+            author_id=testuser.id,
+        ),
+        Post(
+            text="Organizujemy wieczór filmowy w piątek o 20:00. Kto chce dołączyć?",
+            author_id=testuser2.id,
+        ),
+        Post(
+            text="Dzisiaj sprzątanie wspólnej kuchni - dzięki wszystkim za pomoc! Razem jest lepiej",
+            author_id=testuser.id,
+        ),
+        Post(
+            text="Informacja: W sobotę o 10:00 planowana jest kontrola pokoi. Prosimy o porządek",
+            author_id=admin.id,
+        ),
+    ]
+
+    for post in sample_posts:
+        session.add(post)
+
+    session.commit()
+    logger.info(f"Created {len(sample_posts)} sample posts.")
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Lifespan context manager for application startup/shutdown events."""
@@ -98,6 +148,9 @@ async def lifespan(app: FastAPI):
             role=UserRole.ADMIN,
             is_active=True,
         )
+
+        # Create sample posts
+        create_sample_posts(session)
 
     logger.info("Application lifespan startup complete.")
     yield
