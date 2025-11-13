@@ -1,3 +1,5 @@
+from typing import Any
+
 from fastapi.testclient import TestClient
 
 from models.models import FriendshipScenario, User
@@ -17,12 +19,12 @@ def test_read_accepted_friends(client: TestClient, setup_friendship_scenario: Fr
     response = client.get("/friendships/", headers=headers)
 
     assert response.status_code == 200
-    friends_data = response.json()
+    friends_data: list[dict[str, Any]] = response.json()
 
     assert isinstance(friends_data, list)
     assert len(friends_data) == 1
 
-    friends_list = [User(**user) for user in friends_data]
+    friends_list: list[User] = [User.model_validate(user) for user in friends_data]
     assert friends_list[0].username == "UserB"
 
 
@@ -34,12 +36,12 @@ def test_read_accepted_friends_explicit(
     response = client.get("/friendships/?filter_type=accepted", headers=headers)
 
     assert response.status_code == 200
-    friends_data = response.json()
+    friends_data: list[dict[str, Any]] = response.json()
 
     assert isinstance(friends_data, list)
     assert len(friends_data) == 1
 
-    friends_list = [User(**user) for user in friends_data]
+    friends_list: list[User] = [User.model_validate(user) for user in friends_data]
     assert friends_list[0].username == "UserB"
 
 
@@ -49,12 +51,12 @@ def test_read_pending_requests(client: TestClient, setup_friendship_scenario: Fr
     response = client.get("/friendships/?filter_type=pending", headers=headers)
 
     assert response.status_code == 200
-    pending_data = response.json()
+    pending_data: list[dict[str, Any]] = response.json()
 
     assert isinstance(pending_data, list)
     assert len(pending_data) == 1
 
-    pending_list = [User(**user) for user in pending_data]
+    pending_list: list[User] = [User.model_validate(user) for user in pending_data]
     assert pending_list[0].username == "UserC"
 
 
@@ -64,10 +66,10 @@ def test_read_sent_requests(client: TestClient, setup_friendship_scenario: Frien
     response = client.get("/friendships/?filter_type=sent", headers=headers)
 
     assert response.status_code == 200
-    sent_data = response.json()
+    sent_data: list[dict[str, Any]] = response.json()
 
     assert isinstance(sent_data, list)
     assert len(sent_data) == 1
 
-    sent_list = [User(**user) for user in sent_data]
+    sent_list: list[User] = [User.model_validate(user) for user in sent_data]
     assert sent_list[0].username == "UserD"
