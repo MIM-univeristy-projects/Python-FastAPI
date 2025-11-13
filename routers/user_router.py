@@ -6,13 +6,11 @@ from fastapi.security import OAuth2PasswordRequestForm
 from sqlmodel import Session
 
 from database.database import get_session
-from models.models import TokenResponse, User, UserCreate, UserResponse
+from models.models import User, UserCreate
 from repositories.user_repo import create_user, get_user_by_email, get_user_by_username
-from routers.auth_routes import login
-from services.security import (
-    get_current_active_user,
-    get_password_hash,
-)
+from routers.auth_routes import TokenWithUser, login
+from services.security import get_current_active_user, get_password_hash
+from utils.logging import logger
 
 router = APIRouter(prefix="/users", tags=["users"])
 
@@ -33,14 +31,16 @@ def is_valid_password(password: str) -> bool:
     return has_upper and has_special and long_enough
 
 
-@router.post("/register", response_model=TokenResponse)
-async def register_user(user: UserCreate, session: Session = session):
+@router.post("/register", response_model=TokenWithUser)
+async def register_user(user: UserCreate, session: Session = session) -> TokenWithUser:
     """Register a new user and return an access token."""
     valid_email = is_valid_email(user.email)
     if not valid_email:
+        logger.debug(f"Invalid email attempted during registration: {user.email}")
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Incorrect Email")
     valid_password = is_valid_password(user.password)
     if not valid_password:
+        logger.debug(f"Weak password attempted during registration for email: {user.email}")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Password must have: min. 8 characters, a special "
@@ -82,7 +82,7 @@ async def register_user(user: UserCreate, session: Session = session):
     )
 
 
-@router.get("/me", response_model=UserResponse)
-async def read_users_me(current_user: User = active_user):
+@router.get("/me", response_model=User)
+async def read_users_me(current_user: User = active_user) -> User:
     """Get current authenticated user information. Returns user data including role."""
     return current_user

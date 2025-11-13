@@ -5,7 +5,7 @@ from fastapi.security import OAuth2PasswordRequestForm
 from sqlmodel import Session
 
 from database.database import get_session
-from models.models import TokenResponse, UserResponse
+from models.models import TokenWithUser
 from services.security import ACCESS_TOKEN_EXPIRE_MINUTES, authenticate_user, create_access_token
 from utils.logging import logger
 
@@ -14,11 +14,11 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 session: Session = Depends(get_session)
 
 
-@router.post("/token", response_model=TokenResponse)
+@router.post("/token", response_model=TokenWithUser)
 async def login(
     form_data: OAuth2PasswordRequestForm = Depends(),  # noqa: B008
     session: Session = session,
-) -> TokenResponse:
+) -> TokenWithUser:
     """
     OAuth2 compatible token login. Use username and password to get an access token.
     Returns token along with user information including role for frontend routing.
@@ -47,17 +47,8 @@ async def login(
             detail="User ID not found",
         )
 
-    return TokenResponse(
+    return TokenWithUser(
         access_token=access_token,
         token_type="bearer",
-        user=UserResponse(
-            id=user.id,
-            email=user.email,
-            username=user.username,
-            first_name=user.first_name,
-            last_name=user.last_name,
-            role=user.role,
-            is_active=user.is_active,
-            created_at=user.created_at,
-        ),
+        user=user,
     )

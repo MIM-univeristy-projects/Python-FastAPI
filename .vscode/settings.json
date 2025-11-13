@@ -4,7 +4,10 @@
         "nonexistentuser",
         "poolclass",
         "pwdlib",
+        "seconduser",
+        "testpass",
         "unliked",
+        "unliking",
         "venv"
     ],
     "python.analysis.autoImportCompletions": true,

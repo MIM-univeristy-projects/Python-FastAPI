@@ -12,39 +12,62 @@ def get_auth_headers(client: TestClient, username: str, password: str = "testpas
 
 
 def test_read_accepted_friends(client: TestClient, setup_friendship_scenario: FriendshipScenario):
-    """Tests GET /friends/ - should return a list of accepted friends."""
+    """Tests GET /?filter_type=accepted - should return a list of accepted friends."""
     headers = get_auth_headers(client, "UserA")
-    response = client.get("/friends/", headers=headers)
+    response = client.get("/friendships/", headers=headers)
 
     assert response.status_code == 200
-    friends_list: list[User] = response.json()
+    friends_data = response.json()
 
-    assert isinstance(friends_list, list)
-    assert len(friends_list) == 1
+    assert isinstance(friends_data, list)
+    assert len(friends_data) == 1
+
+    friends_list = [User(**user) for user in friends_data]
+    assert friends_list[0].username == "UserB"
+
+
+def test_read_accepted_friends_explicit(
+    client: TestClient, setup_friendship_scenario: FriendshipScenario
+):
+    """Tests GET /?filter_type=accepted (explicit) - should return a list of accepted friends."""
+    headers = get_auth_headers(client, "UserA")
+    response = client.get("/friendships/?filter_type=accepted", headers=headers)
+
+    assert response.status_code == 200
+    friends_data = response.json()
+
+    assert isinstance(friends_data, list)
+    assert len(friends_data) == 1
+
+    friends_list = [User(**user) for user in friends_data]
     assert friends_list[0].username == "UserB"
 
 
 def test_read_pending_requests(client: TestClient, setup_friendship_scenario: FriendshipScenario):
-    """Tests GET /friends/pending - should return a list of received friend requests."""
+    """Tests GET /?filter_type=pending - should return a list of received friend requests."""
     headers = get_auth_headers(client, "UserA")
-    response = client.get("/friends/pending", headers=headers)
+    response = client.get("/friendships/?filter_type=pending", headers=headers)
 
     assert response.status_code == 200
-    pending_list: list[User] = response.json()
+    pending_data = response.json()
 
-    assert isinstance(pending_list, list)
-    assert len(pending_list) == 1
+    assert isinstance(pending_data, list)
+    assert len(pending_data) == 1
+
+    pending_list = [User(**user) for user in pending_data]
     assert pending_list[0].username == "UserC"
 
 
 def test_read_sent_requests(client: TestClient, setup_friendship_scenario: FriendshipScenario):
-    """Tests GET /friends/sent - should return a list of sent friend requests."""
+    """Tests GET /?filter_type=sent - should return a list of sent friend requests."""
     headers = get_auth_headers(client, "UserA")
-    response = client.get("/friends/sent", headers=headers)
+    response = client.get("/friendships/?filter_type=sent", headers=headers)
 
     assert response.status_code == 200
-    sent_list: list[User] = response.json()
+    sent_data = response.json()
 
-    assert isinstance(sent_list, list)
-    assert len(sent_list) == 1
+    assert isinstance(sent_data, list)
+    assert len(sent_data) == 1
+
+    sent_list = [User(**user) for user in sent_data]
     assert sent_list[0].username == "UserD"

@@ -1,6 +1,6 @@
 from sqlmodel import Session, desc, select
 
-from models.models import Post, PostLikes, User
+from models.models import Post, PostLike, User
 
 
 def get_all_posts(session: Session) -> list[Post]:
@@ -33,19 +33,17 @@ def create_post(session: Session, post: Post) -> Post:
     return post
 
 
-def like_post(session: Session, user_id: int, post_id: int) -> PostLikes:
+def like_post(session: Session, user_id: int, post_id: int) -> PostLike:
     """Like a post. Creates a new like record."""
     # Check if already liked
     existing_like = session.exec(
-        select(PostLikes).where(
-            PostLikes.user_id == user_id, PostLikes.post_id == post_id
-        )
+        select(PostLike).where(PostLike.user_id == user_id, PostLike.post_id == post_id)
     ).first()
-    
+
     if existing_like:
         return existing_like
-    
-    new_like = PostLikes(user_id=user_id, post_id=post_id)
+
+    new_like = PostLike(user_id=user_id, post_id=post_id)
     session.add(new_like)
     session.commit()
     session.refresh(new_like)
@@ -55,14 +53,12 @@ def like_post(session: Session, user_id: int, post_id: int) -> PostLikes:
 def unlike_post(session: Session, user_id: int, post_id: int) -> bool:
     """Unlike a post. Returns True if a like was removed, False if no like existed."""
     like = session.exec(
-        select(PostLikes).where(
-            PostLikes.user_id == user_id, PostLikes.post_id == post_id
-        )
+        select(PostLike).where(PostLike.user_id == user_id, PostLike.post_id == post_id)
     ).first()
-    
+
     if not like:
         return False
-    
+
     session.delete(like)
     session.commit()
     return True
@@ -70,7 +66,7 @@ def unlike_post(session: Session, user_id: int, post_id: int) -> bool:
 
 def get_post_likes_count(session: Session, post_id: int) -> int:
     """Get the count of likes for a specific post."""
-    statement = select(PostLikes).where(PostLikes.post_id == post_id)
+    statement = select(PostLike).where(PostLike.post_id == post_id)
     likes = session.exec(statement).all()
     return len(likes)
 
@@ -78,8 +74,6 @@ def get_post_likes_count(session: Session, post_id: int) -> int:
 def is_post_liked_by_user(session: Session, user_id: int, post_id: int) -> bool:
     """Check if a specific user has liked a specific post."""
     like = session.exec(
-        select(PostLikes).where(
-            PostLikes.user_id == user_id, PostLikes.post_id == post_id
-        )
+        select(PostLike).where(PostLike.user_id == user_id, PostLike.post_id == post_id)
     ).first()
     return like is not None

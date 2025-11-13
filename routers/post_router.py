@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlmodel import Session
 
 from database.database import get_session
-from models.models import Post, PostLikes, PostLikesResponse, PostReadWithAuthor, User
+from models.models import LikesInfo, Post, PostLike, PostWithAuthor, User
 from repositories.post_repo import (
     create_post as repo_create_post,
 )
@@ -39,7 +39,7 @@ def read_post(post_id: int, session: Session = session) -> Post:
 
 
 @router.get("/{post_id}/with-author")
-def read_post_with_author(post_id: int, session: Session = session) -> PostReadWithAuthor:
+def read_post_with_author(post_id: int, session: Session = session) -> PostWithAuthor:
     """Get a post by ID with author information."""
     result = get_post_with_author(session, post_id)
     if not result:
@@ -54,12 +54,12 @@ def read_post_with_author(post_id: int, session: Session = session) -> PostReadW
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Post ID is missing"
         )
 
-    return PostReadWithAuthor(
+    return PostWithAuthor(
         id=post.id,
-        text=post.text,
+        content=post.content,
         author_id=post.author_id,
-        created_at=post.created_at,
-        author=author,
+        created_at=str(post.created_at),
+        author_name=author.username,
     )
 
 
@@ -74,7 +74,7 @@ def like_post_endpoint(
     post_id: int,
     current_user: User = current_user,
     session: Session = session,
-) -> PostLikes:
+) -> PostLike:
     """Like a post. Requires authentication."""
     # Check if post exists
     post = get_post_by_id(session, post_id)
@@ -116,7 +116,7 @@ def get_post_likes(
     post_id: int,
     current_user: User | None = current_user,
     session: Session = session,
-) -> PostLikesResponse:
+) -> LikesInfo:
     """Get likes information for a post. Returns count and whether current user has liked it."""
     post = get_post_by_id(session, post_id)
     if not post:
@@ -128,7 +128,7 @@ def get_post_likes(
     if current_user and current_user.id:
         liked_by_current_user = is_post_liked_by_user(session, current_user.id, post_id)
 
-    return PostLikesResponse(
+    return LikesInfo(
         likes_count=likes_count,
         liked_by_current_user=liked_by_current_user,
     )

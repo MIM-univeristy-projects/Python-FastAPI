@@ -1,9 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel
 from sqlmodel import Session
 
 from database.database import get_session
-from models.models import CommentResponse, Comments, User
+from models.models import Comment, CommentRequest, CommentWithAuthor, User
 from repositories.comment_repo import (
     create_comment,
     delete_comment,
@@ -13,6 +12,7 @@ from repositories.comment_repo import (
 )
 from repositories.post_repo import get_post_by_id
 from services.security import get_current_active_user
+from utils.logging import logger
 
 router = APIRouter(prefix="/posts", tags=["comments"])
 
@@ -20,38 +20,25 @@ session: Session = Depends(get_session)
 current_user = Depends(get_current_active_user)
 
 
-class CommentCreate(BaseModel):
-    """Request model for creating a comment."""
-
-    content: str
-
-
-class CommentUpdate(BaseModel):
-    """Request model for updating a comment."""
-
-    content: str
-
-
 @router.post("/{post_id}/comments", status_code=status.HTTP_201_CREATED)
 def create_comment_endpoint(
     post_id: int,
-    comment_data: CommentCreate,
+    comment_data: CommentRequest,
     current_user: User = current_user,
     session: Session = session,
-) -> CommentResponse:
+) -> CommentWithAuthor:
     """Create a new comment on a post. Requires authentication."""
-    # Check if post exists
     post = get_post_by_id(session, post_id)
     if not post:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Post not found")
 
     if not current_user.id:
+        logger.error("User ID is missing")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="User ID is missing"
         )
 
-    # Create the comment
-    new_comment = Comments(
+    new_comment = Comment(
         content=comment_data.content,
         author_id=current_user.id,
         post_id=post_id,
@@ -64,13 +51,13 @@ def create_comment_endpoint(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Comment ID is missing"
         )
 
-    return CommentResponse(
+    return CommentWithAuthor(
         id=created_comment.id,
         content=created_comment.content,
         author_id=created_comment.author_id,
         post_id=created_comment.post_id,
-        created_at=created_comment.created_at,
-        author=current_user,
+        created_at=str(created_comment.created_at),
+        author_name=current_user.username,
     )
 
 
@@ -78,7 +65,7 @@ def create_comment_endpoint(
 def get_post_comments(
     post_id: int,
     session: Session = session,
-) -> list[CommentResponse]:
+) -> list[CommentWithAuthor]:
     """Get all comments for a specific post."""
     # Check if post exists
     post = get_post_by_id(session, post_id)
@@ -89,19 +76,19 @@ def get_post_comments(
     comments_with_authors = get_comments_with_authors(session, post_id)
 
     # Build response
-    result: list[CommentResponse] = []
+    result: list[CommentWithAuthor] = []
     for comment, author in comments_with_authors:
         if not comment.id:
             continue
 
         result.append(
-            CommentResponse(
+            CommentWithAuthor(
                 id=comment.id,
                 content=comment.content,
                 author_id=comment.author_id,
                 post_id=comment.post_id,
-                created_at=comment.created_at,
-                author=author,
+                created_at=str(comment.created_at),
+                author_name=author.username,
             )
         )
 
@@ -136,10 +123,10 @@ def delete_comment_endpoint(
 @router.put("/comments/{comment_id}")
 def update_comment_endpoint(
     comment_id: int,
-    comment_data: CommentUpdate,
+    comment_data: CommentRequest,
     current_user: User = current_user,
     session: Session = session,
-) -> CommentResponse:
+) -> CommentWithAuthor:
     """Update a comment's content. Only the comment author can update. Requires authentication."""
     comment = get_comment_by_id(session, comment_id)
     if not comment:
@@ -154,20 +141,22 @@ def update_comment_endpoint(
 
     updated_comment = update_comment(session, comment_id, comment_data.content)
     if not updated_comment:
+        logger.error("Failed to update comment")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to update comment"
         )
 
     if not updated_comment.id:
+        logger.error("Comment ID is missing")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Comment ID is missing"
         )
 
-    return CommentResponse(
+    return CommentWithAuthor(
         id=updated_comment.id,
         content=updated_comment.content,
         author_id=updated_comment.author_id,
         post_id=updated_comment.post_id,
-        created_at=updated_comment.created_at,
-        author=current_user,
+        created_at=str(updated_comment.created_at),
+        author_name=current_user.username,
     )

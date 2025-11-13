@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlmodel import Session, select
 
 from database.database import get_session
-from models.models import User, UserResponse
+from models.models import User
 from repositories.user_repo import get_user_by_email, get_user_by_username
 from services.security import get_current_admin_user
 
@@ -22,7 +22,7 @@ def read_all_users(
     return list(users)
 
 
-@router.get("/user/{identifier}", response_model=UserResponse)
+@router.get("/user/{identifier}", response_model=User)
 def read_user_by_username(
     identifier: str,
     session: Session = session,

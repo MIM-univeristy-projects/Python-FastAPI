@@ -1,14 +1,10 @@
+import enum
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlmodel import Session
 
 from database.database import get_session
-from models.models import (
-    Friendship,
-    FriendshipResponse,
-    FriendshipStatusEnum,
-    User,
-    UserResponse,
-)
+from models.models import Friendship, FriendshipStatusEnum, User
 from repositories.friendship_repo import (
     create_friendship,
     get_accepted_friends,
@@ -23,16 +19,24 @@ from repositories.user_repo import get_user_by_id
 from services.security import get_current_active_user, get_current_user
 from utils.logging import logger
 
-router = APIRouter(tags=["Friendships"])
+router = APIRouter(prefix="/friendships", tags=["friendships"])
 
 current_user = Depends(get_current_user)
 session = Depends(get_session)
 current_active_user = Depends(get_current_active_user)
 
 
+class FriendListFilter(str, enum.Enum):
+    """Filter options for listing friends."""
+
+    ACCEPTED = "accepted"
+    PENDING = "pending"
+    SENT = "sent"
+
+
 @router.post(
-    "/friends/request/{addressee_id}",
-    response_model=FriendshipResponse,
+    "/request/{addressee_id}",
+    response_model=Friendship,
     status_code=status.HTTP_201_CREATED,
 )
 def send_friend_request(
@@ -74,29 +78,31 @@ def send_friend_request(
 
     existing_friendship = get_friendship_any_status(session, current_user.id, addressee_id)
     if existing_friendship:
-        if existing_friendship.status == FriendshipStatusEnum.ACCEPTED:
-            detail = "You are already friends."
-        elif existing_friendship.status == FriendshipStatusEnum.PENDING:
-            detail = "Friend request has already been sent."
-        else:
-            detail = "User has already declined your friend request."
+        match existing_friendship.status:
+            case FriendshipStatusEnum.ACCEPTED:
+                detail = "You are already friends."
+            case FriendshipStatusEnum.PENDING:
+                detail = "Friend request has already been sent."
+            case FriendshipStatusEnum.DECLINED:
+                detail = "User has already declined your friend request."
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=detail)
 
-    new_friendship = Friendship(
-        requester_id=current_user.id,
-        addressee_id=addressee_id,
-        status=FriendshipStatusEnum.PENDING,
+    return create_friendship(
+        session,
+        Friendship(
+            requester_id=current_user.id,
+            addressee_id=addressee_id,
+            status=FriendshipStatusEnum.PENDING,
+        ),
     )
-    created_friendship = create_friendship(session, new_friendship)
-    return created_friendship
 
 
-@router.post("/friends/accept/{requester_id}", response_model=FriendshipResponse)
+@router.post("/accept/{requester_id}", response_model=Friendship)
 def accept_friend_request(
     requester_id: int,
     current_user: User = current_active_user,
     session: Session = session,
-):
+) -> Friendship:
     """Accept a friend request from a user with the given ID.
 
     Args:
@@ -127,16 +133,15 @@ def accept_friend_request(
         )
 
     pending_request.status = FriendshipStatusEnum.ACCEPTED
-    updated_friendship = update_friendship(session, pending_request)
-    return updated_friendship
+    return update_friendship(session, pending_request)
 
 
-@router.post("/friends/decline/{requester_id}", response_model=FriendshipResponse)
+@router.post("/decline/{requester_id}", response_model=Friendship)
 def decline_friend_request(
     requester_id: int,
     current_user: User = current_active_user,
     session: Session = session,
-):
+) -> Friendship:
     """Decline a friend request from a user with the given ID.
 
     Args:
@@ -167,16 +172,15 @@ def decline_friend_request(
         )
 
     pending_request.status = FriendshipStatusEnum.DECLINED
-    updated_friendship = update_friendship(session, pending_request)
-    return updated_friendship
+    return update_friendship(session, pending_request)
 
 
-@router.delete("/friends/remove/{friend_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/remove/{friend_id}", status_code=status.HTTP_204_NO_CONTENT)
 def remove_friend(
     friend_id: int,
     current_user: User = current_active_user,
     session: Session = session,
-):
+) -> None:
     """Remove a friend (delete friendship).
 
     Args:
@@ -211,12 +215,19 @@ def remove_friend(
     return
 
 
-@router.get("/friends/", response_model=list[UserResponse])
+@router.get("/", response_model=list[User])
 def read_friends(
+    filter_type: FriendListFilter = FriendListFilter.ACCEPTED,
     current_user: User = current_active_user,
     session: Session = session,
 ) -> list[User]:
-    """Get a list of accepted friends.
+    """Get a list of friends or pending requests.
+
+    Query Parameters:
+        filter_type: Filter friends by status
+            - accepted: Accepted friends (default)
+            - pending: Received pending friend requests
+            - sent: Sent pending friend requests
 
     Args:
         current_user (User, optional): The user whose friends to retrieve.
@@ -227,66 +238,19 @@ def read_friends(
         HTTPException: 500 Internal Server Error if the current user is missing an ID
 
     Returns:
-        list[UserResponse]: List of users who are friends with the current user
+        list[User]: List of users based on the filter type
     """
     if not current_user.id:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="User missing id identifier"
         )
 
-    friends_list = get_accepted_friends(session=session, user_id=current_user.id)
-    return friends_list
-
-
-@router.get("/friends/pending", response_model=list[UserResponse])
-def read_pending_requests(
-    current_user: User = current_active_user,
-    session: Session = session,
-):
-    """Get a list of received pending friend requests.
-
-    Args:
-        current_user (User, optional): The user whose pending requests to retrieve.
-            Defaults to current_active_user
-        session (Session, optional): Database session. Defaults to session.
-
-    Raises:
-        HTTPException: 500 Internal Server Error if the current user is missing an ID
-
-    Returns:
-        list[UserResponse]: List of users who have sent friend requests to current user
-    """
-    if not current_user.id:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="User missing id identifier"
-        )
-
-    pending_list = get_received_pending_requests(session=session, user_id=current_user.id)
-    return pending_list
-
-
-@router.get("/friends/sent", response_model=list[UserResponse])
-def read_sent_requests(
-    current_user: User = current_active_user,
-    session: Session = session,
-):
-    """Get a list of sent pending friend requests.
-
-    Args:
-        current_user (User, optional): The user whose sent requests to retrieve.
-            Defaults to current_active_user
-        session (Session, optional): Database session. Defaults to session.
-
-    Raises:
-        HTTPException: 500 Internal Server Error if the current user is missing an ID
-
-    Returns:
-        list[UserResponse]: List of users to whom current user has sent friend requests
-    """
-    if not current_user.id:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="User missing id identifier"
-        )
-
-    sent_list = get_sent_pending_requests(session=session, user_id=current_user.id)
-    return sent_list
+    match filter_type:
+        case FriendListFilter.ACCEPTED:
+            return get_accepted_friends(session=session, user_id=current_user.id)
+        case FriendListFilter.PENDING:
+            return get_received_pending_requests(session=session, user_id=current_user.id)
+        case FriendListFilter.SENT:
+            return get_sent_pending_requests(session=session, user_id=current_user.id)
+        case _:
+            return get_accepted_friends(session=session, user_id=current_user.id)

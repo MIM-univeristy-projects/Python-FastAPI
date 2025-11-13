@@ -1,6 +1,7 @@
 """Pytest configuration and fixtures for testing."""
 
 import enum
+from datetime import UTC, datetime
 
 import pytest
 from fastapi.testclient import TestClient
@@ -11,21 +12,30 @@ from database.database import get_session
 from main import app
 from models.models import (
     AuthenticatedUser,
+    Comment,
+    Event,
     Friendship,
     FriendshipScenario,
     FriendshipStatusEnum,
+    Post,
     User,
     UserRole,
 )
-from services.security import get_password_hash
+from services.security import create_access_token, get_password_hash
 
 
 class FixtureEnum(str, enum.Enum):
+    """Enumeration of all available test fixtures."""
+
     SESSION = "session"
     CLIENT = "client"
     LOGGED_IN_USER = "logged_in_user"
     LOGGED_IN_ADMIN = "logged_in_admin"
+    SECOND_USER = "second_user"
     SETUP_FRIENDSHIP_SCENARIO = "setup_friendship_scenario"
+    TEST_POST = "test_post"
+    TEST_COMMENT = "test_comment"
+    TEST_EVENT = "test_event"
 
 
 @pytest.fixture(name=FixtureEnum.SESSION)
@@ -159,7 +169,6 @@ def setup_friendship_scenario_fixture(session: Session) -> FriendshipScenario:
     session.add_all([user_a, user_b, user_c, user_d])
     session.commit()
 
-    # Reload objects to get their IDs
     session.refresh(user_a)
     session.refresh(user_b)
     session.refresh(user_c)
@@ -170,21 +179,18 @@ def setup_friendship_scenario_fixture(session: Session) -> FriendshipScenario:
     assert user_c.id is not None
     assert user_d.id is not None
 
-    # Relationship 1: UserA and UserB are friends
     friendship_ab = Friendship(
         requester_id=user_a.id,
         addressee_id=user_b.id,
         status=FriendshipStatusEnum.ACCEPTED,
     )
 
-    # Relationship 2: UserC sent a friend request to UserA
     friendship_ca = Friendship(
         requester_id=user_c.id,
         addressee_id=user_a.id,
         status=FriendshipStatusEnum.PENDING,
     )
 
-    # Relationship 3: UserA sent a friend request to UserD
     friendship_ad = Friendship(
         requester_id=user_a.id,
         addressee_id=user_d.id,
@@ -200,3 +206,83 @@ def setup_friendship_scenario_fixture(session: Session) -> FriendshipScenario:
         user_c_id=user_c.id,
         user_d_id=user_d.id,
     )
+
+
+@pytest.fixture(name=FixtureEnum.SECOND_USER)
+def second_user_fixture(session: Session) -> AuthenticatedUser:
+    """Create a second test user with authentication."""
+    user = User(
+        username="seconduser",
+        email="second@test.com",
+        first_name="Second",
+        last_name="User",
+        hashed_password=get_password_hash("testpass123"),
+        role=UserRole.USER,
+    )
+    session.add(user)
+    session.commit()
+    session.refresh(user)
+
+    # Generate token
+    access_token = create_access_token(data={"sub": user.username})
+
+    return AuthenticatedUser(
+        user=user,
+        token=access_token,
+        headers={"Authorization": f"Bearer {access_token}"},
+    )
+
+
+@pytest.fixture(name=FixtureEnum.TEST_POST)
+def test_post_fixture(session: Session, logged_in_user: AuthenticatedUser) -> Post:
+    """Create a test post."""
+    if not logged_in_user.user.id:
+        raise ValueError("Logged in user must have an ID")
+    post = Post(
+        content="This is a test post about dorm life!",
+        author_id=logged_in_user.user.id,
+    )
+    session.add(post)
+    session.commit()
+    session.refresh(post)
+    return post
+
+
+@pytest.fixture(name=FixtureEnum.TEST_COMMENT)
+def test_comment_fixture(
+    session: Session, logged_in_user: AuthenticatedUser, test_post: Post
+) -> Comment:
+    """Create a test comment on the test post."""
+    if not logged_in_user.user.id:
+        raise ValueError("Logged in user must have an ID")
+
+    if not test_post.id:
+        raise ValueError("Test post must have an ID")
+    comment = Comment(
+        content="This is a test comment!",
+        author_id=logged_in_user.user.id,
+        post_id=test_post.id,
+    )
+    session.add(comment)
+    session.commit()
+    session.refresh(comment)
+    return comment
+
+
+@pytest.fixture(name=FixtureEnum.TEST_EVENT)
+def test_event_fixture(session: Session, logged_in_user: AuthenticatedUser) -> Event:
+    """Create a test event."""
+    if not logged_in_user.user.id:
+        raise ValueError("Logged in user must have an ID")
+    event = Event(
+        title="Dorm Party",
+        description="Let's have some fun!",
+        location="Common Room",
+        start_date=datetime(2024, 12, 31, 20, 0, 0, tzinfo=UTC),
+        end_date=datetime(2024, 12, 31, 23, 59, 0, tzinfo=UTC),
+        creator_id=logged_in_user.user.id,
+    )
+    session.add(event)
+    session.commit()
+    session.refresh(event)
+    return event

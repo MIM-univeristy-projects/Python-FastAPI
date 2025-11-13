@@ -11,6 +11,7 @@ from routers import (
     admin_router,
     auth_routes,
     comment_router,
+    event_router,
     friendship_router,
     post_router,
     user_router,
@@ -94,21 +95,22 @@ def create_sample_posts(session: Session) -> None:
 
     sample_posts = [
         Post(
-            text="Wspólne gotowanie w kuchni na korytarzu to najlepsza forma integracji! "
+            content="Wspólne gotowanie w kuchni na korytarzu to najlepsza forma integracji! "
             "Ktoś ma przepis na dobry makaron? 🍝",
             author_id=testuser.id,
         ),
         Post(
-            text="Organizujemy wieczór filmowy w piątek o 20:00. Kto chce dołączyć?",
+            content="Organizujemy wieczór filmowy w piątek o 20:00. Kto chce dołączyć?",
             author_id=testuser2.id,
         ),
         Post(
-            text="Dzisiaj sprzątanie wspólnej kuchni - "
+            content="Dzisiaj sprzątanie wspólnej kuchni - "
             "dzięki wszystkim za pomoc! Razem jest lepiej",
             author_id=testuser.id,
         ),
         Post(
-            text="Informacja: W sobotę o 10:00 planowana jest kontrola pokoi. Prosimy o porządek",
+            content="Informacja: W sobotę o 10:00 planowana jest kontrola pokoi. "
+            "Prosimy o porządek",
             author_id=admin.id,
         ),
     ]
@@ -171,6 +173,7 @@ app.include_router(admin_router.router)
 app.include_router(auth_routes.router)
 app.include_router(post_router.router)
 app.include_router(comment_router.router)
+app.include_router(event_router.router)
 app.include_router(friendship_router.router)
 
 origins: list[str] = [
