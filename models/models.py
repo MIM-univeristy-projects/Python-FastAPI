@@ -154,6 +154,26 @@ class EventAttendee(SQLModel, table=True):
 # ============================================================================
 
 
+class EventCreate(SQLModel):
+    """Event creation model for creating new events."""
+
+    title: str = Field(max_length=255)
+    description: str
+    location: str = Field(max_length=255)
+    start_date: datetime
+    end_date: datetime
+
+
+class EventUpdate(SQLModel):
+    """Event update model for modifying existing events."""
+
+    title: str | None = Field(default=None, max_length=255)
+    description: str | None = None
+    location: str | None = Field(default=None, max_length=255)
+    start_date: datetime | None = None
+    end_date: datetime | None = None
+
+
 # User-related models
 class UserCreate(SQLModel):
     """User creation model for user registration."""

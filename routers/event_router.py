@@ -2,7 +2,14 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlmodel import Session
 
 from database.database import get_session
-from models.models import AttendanceStatusEnum, Event, EventAttendee, User
+from models.models import (
+    AttendanceStatusEnum,
+    Event,
+    EventAttendee,
+    EventCreate,
+    EventUpdate,
+    User,
+)
 from repositories.event_repo import (
     add_attendee,
     create_event,
@@ -22,7 +29,7 @@ current_user = Depends(get_current_active_user)
 
 @router.post("/", status_code=status.HTTP_201_CREATED)
 def create_event_endpoint(
-    event: Event,
+    event_data: EventCreate,
     current_user: User = current_user,
     session: Session = session,
 ) -> Event:
@@ -33,13 +40,21 @@ def create_event_endpoint(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="User ID is missing"
         )
 
-    if event.start_date >= event.end_date:
+    if event_data.start_date >= event_data.end_date:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="End date must be after start date",
         )
 
-    event.creator_id = current_user.id
+    # Create Event from EventCreate
+    event = Event(
+        title=event_data.title,
+        description=event_data.description,
+        location=event_data.location,
+        start_date=event_data.start_date,
+        end_date=event_data.end_date,
+        creator_id=current_user.id,
+    )
 
     return create_event(session, event)
 
@@ -67,7 +82,7 @@ def get_event(
 @router.put("/{event_id}")
 def update_event_endpoint(
     event_id: int,
-    event_data: Event,
+    event_data: EventUpdate,
     current_user: User = current_user,
     session: Session = session,
 ) -> Event:
@@ -83,7 +98,7 @@ def update_event_endpoint(
             detail="Only the event creator can update this event",
         )
 
-    # Validate dates
+    # Validate dates if both are provided or if only one is being updated
     start = event_data.start_date if event_data.start_date else event.start_date
     end = event_data.end_date if event_data.end_date else event.end_date
 
