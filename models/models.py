@@ -70,9 +70,9 @@ class PostLikes(SQLModel, table=True):
 
     __tablename__ = "post_likes"  # type: ignore
     id: int | None = Field(default=None, primary_key=True)
-    text: str = Field(sa_column=Column(TEXT))
     user_id: int = Field(foreign_key="user.id")
     post_id: int = Field(foreign_key="post.id")
+    created_at: datetime = Field(default=datetime.now(UTC))
 
 
 class Comments(SQLModel, table=True):
@@ -178,6 +178,13 @@ class PostReadWithAuthor(BaseModel):
     author_id: int
     created_at: datetime
     author: User
+
+
+class PostLikesResponse(BaseModel):
+    """Response model for post likes information."""
+
+    likes_count: int
+    liked_by_current_user: bool
 
 
 # ============================================================================

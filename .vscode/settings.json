@@ -4,6 +4,7 @@
         "nonexistentuser",
         "poolclass",
         "pwdlib",
+        "unliked",
         "venv"
     ],
     "python.analysis.autoImportCompletions": true,

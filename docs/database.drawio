@@ -33,9 +33,9 @@ erDiagram
 
     post_likes {
         INTEGER id PK
-        TEXT type
         INTEGER user_id FK
         INTEGER post_id FK
+        DATETIME created_at
     }
 
     conversations {
