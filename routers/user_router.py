@@ -6,7 +6,7 @@ from fastapi.security import OAuth2PasswordRequestForm
 from sqlmodel import Session
 
 from database.database import get_session
-from models.models import User, UserCreate
+from models.models import User, UserCreate, UserRead
 from repositories.user_repo import create_user, get_user_by_email, get_user_by_username
 from routers.auth_routes import TokenWithUser, login
 from services.security import get_current_active_user, get_password_hash
@@ -82,7 +82,7 @@ async def register_user(user: UserCreate, session: Session = session) -> TokenWi
     )
 
 
-@router.get("/me", response_model=User)
+@router.get("/me", response_model=UserRead)
 async def read_users_me(current_user: User = active_user) -> User:
-    """Get current authenticated user information. Returns user data including role."""
+    """Get current authenticated user information. Returns user data excluding password."""
     return current_user
