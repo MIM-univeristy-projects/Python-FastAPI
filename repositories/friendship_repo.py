@@ -1,4 +1,4 @@
-from sqlmodel import Session, or_, select
+from sqlmodel import Session, and_, or_, select
 
 from models.models import Friendship, FriendshipStatusEnum, User
 
@@ -29,11 +29,16 @@ def get_pending_friendship(
 def get_accepted_friendship(session: Session, user1_id: int, user2_id: int) -> Friendship | None:
     """Wyszukuje zaakceptowaną przyjaźń między dwoma użytkownikami."""
     statement = select(Friendship).where(
-        or_(
-            (Friendship.requester_id == user1_id) & (Friendship.addressee_id == user2_id),
-            (Friendship.requester_id == user2_id) & (Friendship.addressee_id == user1_id),
-        ),
-        Friendship.status == FriendshipStatusEnum.ACCEPTED,
+        and_(
+            or_(
+                (Friendship.requester_id == user1_id) & (Friendship.addressee_id == user2_id),
+                (Friendship.requester_id == user2_id) & (Friendship.addressee_id == user1_id),
+            ),
+            or_(
+                Friendship.status == FriendshipStatusEnum.ACCEPTED,
+                Friendship.status == FriendshipStatusEnum.PENDING,
+            ),
+        )
     )
     return session.exec(statement).one_or_none()
 
