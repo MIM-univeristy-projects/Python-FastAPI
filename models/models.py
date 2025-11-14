@@ -93,6 +93,18 @@ class Comment(SQLModel, table=True):
     created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
 
+class ProfileComment(SQLModel, table=True):
+    """ProfileComment model for storing comments on user profiles."""
+
+    __tablename__ = "profile_comment"  # type: ignore
+
+    id: int | None = Field(default=None, primary_key=True)
+    content: str = Field(sa_column=Column(TEXT))
+    author_id: int = Field(foreign_key="user.id", index=True)
+    profile_user_id: int = Field(foreign_key="user.id", index=True)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+
+
 class Conversation(SQLModel, table=True):
     """Conversation model for managing conversations."""
 
@@ -246,6 +258,12 @@ class CommentWithAuthor(ContentWithAuthor):
     """Response model for comment with author details."""
 
     post_id: int
+
+
+class ProfileCommentWithAuthor(ContentWithAuthor):
+    """Response model for profile comment with author details."""
+
+    profile_user_id: int
 
 
 class PostWithAuthor(ContentWithAuthor):

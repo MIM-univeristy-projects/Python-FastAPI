@@ -1,110 +1,23 @@
-import re
-import string
-
 from fastapi import APIRouter, Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordRequestForm
 from sqlmodel import Session
 
 from database.database import get_session
-from models.models import (
-    CommentRequest,
-    ProfileComment,
-    ProfileCommentWithAuthor,
-    User,
-    UserCreate,
-    UserRead,
-)
+from models.models import CommentRequest, ProfileComment, ProfileCommentWithAuthor, User
 from repositories.profile_comment_repo import (
     create_profile_comment,
+    delete_profile_comment,
     get_profile_comment_by_id,
     get_profile_comments_with_authors,
     update_profile_comment,
 )
-from repositories.user_repo import (
-    create_user,
-    get_user_by_email,
-    get_user_by_id,
-    get_user_by_username,
-)
-from routers.auth_routes import TokenWithUser, login
-from services.security import get_current_active_user, get_password_hash
+from repositories.user_repo import get_user_by_id
+from services.security import get_current_active_user
 from utils.logging import logger
 
-router = APIRouter(prefix="/users", tags=["users"])
+router = APIRouter(prefix="/users", tags=["profile-comments"])
 
 session: Session = Depends(get_session)
-active_user = Depends(get_current_active_user)
 current_user = Depends(get_current_active_user)
-
-
-def is_valid_email(email: str) -> bool:
-    pattern = r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
-    return re.match(pattern, email) is not None
-
-
-def is_valid_password(password: str) -> bool:
-    has_upper = any(ch.isupper() for ch in password)
-    has_special = any(ch in string.punctuation for ch in password)
-    long_enough = len(password) >= 8
-
-    return has_upper and has_special and long_enough
-
-
-@router.post("/register", response_model=TokenWithUser)
-async def register_user(user: UserCreate, session: Session = session) -> TokenWithUser:
-    """Register a new user and return an access token."""
-    valid_email = is_valid_email(user.email)
-    if not valid_email:
-        logger.debug(f"Invalid email attempted during registration: {user.email}")
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Incorrect Email")
-    valid_password = is_valid_password(user.password)
-    if not valid_password:
-        logger.debug(f"Weak password attempted during registration for email: {user.email}")
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Password must have: min. 8 characters, a special "
-            "character and an uppercase letter",
-        )
-    user_from_database = get_user_by_username(session=session, username=user.username)
-    if user_from_database:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="Username already exists"
-        )
-    user_from_database = get_user_by_email(session=session, email=user.email)
-    if user_from_database:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email already exists")
-    user_create = User(
-        email=user.email,
-        username=user.username,
-        first_name=user.first_name,
-        last_name=user.last_name,
-        hashed_password=get_password_hash(user.password),
-        is_active=True,
-    )
-
-    created_user: User | None = create_user(session=session, user=user_create)
-    if not created_user:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="User could not be created"
-        )
-
-    return await login(
-        form_data=OAuth2PasswordRequestForm(
-            username=user.username,
-            password=user.password,
-            scope="",
-            grant_type="",
-            client_id=None,
-            client_secret=None,
-        ),
-        session=session,
-    )
-
-
-@router.get("/me", response_model=UserRead)
-async def read_users_me(current_user: User = active_user) -> User:
-    """Get current authenticated user information. Returns user data excluding password."""
-    return current_user
 
 
 @router.post("/{user_id}/comments", status_code=status.HTTP_201_CREATED)
@@ -115,6 +28,7 @@ def create_profile_comment_endpoint(
     session: Session = session,
 ) -> ProfileCommentWithAuthor:
     """Create a new comment on a user profile. Requires authentication."""
+    # Check if profile user exists
     profile_user = get_user_by_id(session, user_id)
     if not profile_user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
@@ -227,10 +141,29 @@ def update_profile_comment_endpoint(
     )
 
 
-@router.get("/{user_id}", response_model=UserRead)
-def get_user_profile(user_id: int, session: Session = session) -> User:
-    """Get user profile information by user ID. Returns public user data excluding password."""
-    user = get_user_by_id(session=session, user_id=user_id)
-    if not user:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
-    return user
+@router.delete("/comments/{comment_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_profile_comment_endpoint(
+    comment_id: int,
+    current_user: User = current_user,
+    session: Session = session,
+) -> None:
+    """Delete a profile comment.
+
+    Only the comment author or admin can delete. Requires authentication.
+    """
+    comment = get_profile_comment_by_id(session, comment_id)
+    if not comment:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Comment not found")
+
+    # Check if user is the author or an admin
+    if comment.author_id != current_user.id and current_user.role != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You can only delete your own comments",
+        )
+
+    was_deleted = delete_profile_comment(session, comment_id)
+    if not was_deleted:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to delete comment"
+        )

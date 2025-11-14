@@ -14,6 +14,7 @@ from routers import (
     event_router,
     friendship_router,
     post_router,
+    profile_comment_router,
     user_router,
 )
 from services.security import get_password_hash
@@ -173,6 +174,7 @@ app.include_router(admin_router.router)
 app.include_router(auth_routes.router)
 app.include_router(post_router.router)
 app.include_router(comment_router.router)
+app.include_router(profile_comment_router.router)
 app.include_router(event_router.router)
 app.include_router(friendship_router.router)
 
