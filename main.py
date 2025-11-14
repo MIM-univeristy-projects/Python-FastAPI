@@ -128,7 +128,6 @@ async def lifespan(app: FastAPI):
     SQLModel.metadata.create_all(engine)
 
     with Session(engine) as session:
-        # Create test users
         create_user_if_not_exists(
             session=session,
             username="testuser",
@@ -160,7 +159,6 @@ async def lifespan(app: FastAPI):
             is_active=True,
         )
 
-        # Create sample posts
         create_sample_posts(session)
 
     logger.info("Application lifespan startup complete.")
@@ -191,7 +189,8 @@ app.add_middleware(
 )
 
 
-@app.get("/")
-def read_root():
+@app.get("/", response_class=RedirectResponse)
+def read_root() -> RedirectResponse:
+    """Redirect root endpoint to API documentation."""
     logger.info("Root endpoint accessed, redirecting to /docs")
-    return RedirectResponse("/docs")
+    return RedirectResponse(url="/docs")
