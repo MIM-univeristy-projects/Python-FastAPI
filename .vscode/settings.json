@@ -2,17 +2,21 @@
     "cSpell.words": [
         "adminpassword",
         "commentowner",
+        "logintest",
         "nonexistentuser",
         "otherperson",
         "poolclass",
         "pwdlib",
         "roletest",
         "seconduser",
+        "someuser",
         "specialchars",
         "testpass",
+        "tokentest",
         "unliked",
         "unliking",
-        "venv"
+        "venv",
+        "wrongpass"
     ],
     "python.analysis.autoImportCompletions": true,
     "python.analysis.typeCheckingMode": "strict",
