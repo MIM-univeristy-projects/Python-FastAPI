@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlmodel import Session
 
 from database.database import get_session
-from models.models import LikesInfo, Post, PostLike, PostWithAuthor, User
+from models.models import LikesInfo, Post, PostCreate, PostLike, PostWithAuthor, User
 from repositories.post_repo import (
     create_post as repo_create_post,
 )
@@ -63,10 +63,23 @@ def read_post_with_author(post_id: int, session: Session = session) -> PostWithA
     )
 
 
-@router.post("/")
-def create_post(post: Post, session: Session = session) -> Post:
-    """Create a new post."""
-    return repo_create_post(session, post)
+@router.post("/", status_code=status.HTTP_201_CREATED)
+def create_post(
+    post_data: PostCreate,
+    current_user: User = current_user,
+    session: Session = session,
+) -> Post:
+    """Create a new post. Requires authentication."""
+    if not current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="User ID is missing"
+        )
+
+    new_post = Post(
+        content=post_data.content,
+        author_id=current_user.id,
+    )
+    return repo_create_post(session, new_post)
 
 
 @router.post("/{post_id}/like", status_code=status.HTTP_201_CREATED)

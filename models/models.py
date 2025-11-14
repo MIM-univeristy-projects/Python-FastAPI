@@ -226,6 +226,12 @@ class CommentRequest(SQLModel):
     content: str = Field(min_length=1)
 
 
+class PostCreate(SQLModel):
+    """Request model for creating a post."""
+
+    content: str = Field(min_length=1)
+
+
 class ContentWithAuthor(SQLModel):
     """Generic response model for any content with author details."""
 

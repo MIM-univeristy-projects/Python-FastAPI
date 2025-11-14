@@ -52,15 +52,14 @@ class TestPostEndpoints:
 
         new_post_data: dict[str, Any] = {
             "content": "A new post created during testing.",
-            "author_id": logged_in_user.user.id,
         }
 
-        response = client.post("/posts/", json=new_post_data)
-        assert response.status_code == status.HTTP_200_OK
+        response = client.post("/posts/", json=new_post_data, headers=logged_in_user.headers)
+        assert response.status_code == status.HTTP_201_CREATED
         post_data: dict[str, Any] = response.json()
         post: Post = Post.model_validate(post_data)
         assert post.content == new_post_data["content"]
-        assert post.author_id == new_post_data["author_id"]
+        assert post.author_id == logged_in_user.user.id
         assert post.id is not None
 
     def test_create_post_with_long_content(
@@ -73,11 +72,10 @@ class TestPostEndpoints:
         long_content = "Lorem ipsum dolor sit amet. " * 100
         new_post_data: dict[str, Any] = {
             "content": long_content,
-            "author_id": logged_in_user.user.id,
         }
 
-        response = client.post("/posts/", json=new_post_data)
-        assert response.status_code == status.HTTP_200_OK
+        response = client.post("/posts/", json=new_post_data, headers=logged_in_user.headers)
+        assert response.status_code == status.HTTP_201_CREATED
         post_data: dict[str, Any] = response.json()
         post: Post = Post.model_validate(post_data)
         assert post.content == long_content
