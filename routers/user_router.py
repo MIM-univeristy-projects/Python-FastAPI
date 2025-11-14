@@ -7,7 +7,12 @@ from sqlmodel import Session
 
 from database.database import get_session
 from models.models import User, UserCreate, UserRead
-from repositories.user_repo import create_user, get_user_by_email, get_user_by_username
+from repositories.user_repo import (
+    create_user,
+    get_user_by_email,
+    get_user_by_id,
+    get_user_by_username,
+)
 from routers.auth_routes import TokenWithUser, login
 from services.security import get_current_active_user, get_password_hash
 from utils.logging import logger
@@ -86,3 +91,12 @@ async def register_user(user: UserCreate, session: Session = session) -> TokenWi
 async def read_users_me(current_user: User = active_user) -> User:
     """Get current authenticated user information. Returns user data excluding password."""
     return current_user
+
+
+@router.get("/{user_id}", response_model=UserRead)
+def get_user_profile(user_id: int, session: Session = session) -> User:
+    """Get user profile information by user ID. Returns public user data excluding password."""
+    user = get_user_by_id(session=session, user_id=user_id)
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+    return user
