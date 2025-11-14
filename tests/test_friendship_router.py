@@ -114,7 +114,7 @@ class TestFriendshipListing:
         # Invalid filter should be caught by Pydantic validation
         response = client.get("/friendships/?filter_type=invalid", headers=headers)
         # Should return 422 Unprocessable Entity for invalid enum value
-        assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+        assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
 
 class TestSendFriendRequest:
@@ -130,6 +130,7 @@ class TestSendFriendRequest:
             first_name="Sender",
             last_name="User",
             hashed_password=hashed_password,
+            is_active=True,
         )
         user2 = User(
             email="receiver@example.com",
@@ -137,6 +138,7 @@ class TestSendFriendRequest:
             first_name="Receiver",
             last_name="User",
             hashed_password=hashed_password,
+            is_active=True,
         )
         session.add(user1)
         session.add(user2)
@@ -184,6 +186,7 @@ class TestSendFriendRequest:
             first_name="User",
             last_name="One",
             hashed_password=hashed_password,
+            is_active=True,
         )
         user2 = User(
             email="user2@example.com",
@@ -191,6 +194,7 @@ class TestSendFriendRequest:
             first_name="User",
             last_name="Two",
             hashed_password=hashed_password,
+            is_active=True,
         )
         session.add(user1)
         session.add(user2)

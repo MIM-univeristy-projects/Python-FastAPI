@@ -117,9 +117,7 @@ class TestAdminEndpoints:
         session.commit()
         session.refresh(user)
 
-        # Try with different case
         response = client.get(f"/admin/user/{user.email.lower()}", headers=logged_in_admin.headers)
-        # This depends on implementation - may be 404 or 200
         assert response.status_code in [status.HTTP_200_OK, status.HTTP_404_NOT_FOUND]
 
 
@@ -204,7 +202,7 @@ class TestUserRegistration:
         # Pydantic validation may catch this first (422) or custom validation (400)
         assert response.status_code in [
             status.HTTP_400_BAD_REQUEST,
-            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status.HTTP_422_UNPROCESSABLE_CONTENT,
         ]
 
     def test_register_user_duplicate_username(self, client: TestClient, session: Session):

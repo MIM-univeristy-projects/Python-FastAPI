@@ -217,7 +217,7 @@ class TokenWithUser(SQLModel):
 
     access_token: str
     token_type: str
-    user: User
+    user: UserRead
 
 
 class CommentRequest(SQLModel):

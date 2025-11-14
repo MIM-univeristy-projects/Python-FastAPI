@@ -5,7 +5,7 @@ from fastapi.security import OAuth2PasswordRequestForm
 from sqlmodel import Session
 
 from database.database import get_session
-from models.models import TokenWithUser
+from models.models import TokenWithUser, UserRead
 from services.security import ACCESS_TOKEN_EXPIRE_MINUTES, authenticate_user, create_access_token
 from utils.logging import logger
 
@@ -47,8 +47,20 @@ async def login(
             detail="User ID not found",
         )
 
+    # Convert User to UserRead to exclude hashed_password
+    user_read = UserRead(
+        id=user.id,
+        email=user.email,
+        username=user.username,
+        first_name=user.first_name,
+        last_name=user.last_name,
+        role=user.role,
+        is_active=user.is_active,
+        created_at=user.created_at,
+    )
+
     return TokenWithUser(
         access_token=access_token,
         token_type="bearer",
-        user=user,
+        user=user_read,
     )

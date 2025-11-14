@@ -46,6 +46,10 @@ def authenticate_user(session: Session, username_or_email: str, password: str) -
         logger.warning(f"Invalid password for user: {username_or_email}")
         return None
 
+    if not user.is_active:
+        logger.warning(f"Inactive user attempted login: {username_or_email}")
+        return None
+
     logger.info(f"User authenticated successfully: {username_or_email}")
     return user
 
