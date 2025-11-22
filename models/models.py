@@ -320,10 +320,9 @@ class GroupRead(SQLModel):
 
 
 class ConversationCreate(SQLModel):
-    """Conversation creation model."""
+    """Conversation creation model - one-to-one only."""
 
-    title: str = Field(min_length=1, max_length=255)
-    participant_ids: list[int] = Field(min_length=1)
+    participant_id: int  # Single participant ID for one-to-one conversation
 
 
 class ConversationRead(SQLModel):

@@ -15,21 +15,18 @@ class TestConversationEndpoints:
     def test_create_conversation(
         self, client: TestClient, logged_in_user: AuthenticatedUser, second_user: AuthenticatedUser
     ):
-        """Test creating a new conversation."""
+        """Test creating a new one-to-one conversation."""
         if not second_user.user.id:
             raise ValueError("Second user must have an ID")
 
         response = client.post(
             "/conversations/",
-            json={
-                "title": "Test Conversation",
-                "participant_ids": [second_user.user.id],
-            },
+            json={"participant_id": second_user.user.id},
             headers=logged_in_user.headers,
         )
         assert response.status_code == status.HTTP_201_CREATED
         data = response.json()
-        assert data["title"] == "Test Conversation"
+        assert "title" in data
         assert "id" in data
 
     def test_get_conversations(

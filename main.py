@@ -293,47 +293,8 @@ def create_sample_conversations(session: Session) -> None:
         session.add(message1)
         session.add(message2)
 
-    # Conversation 2: testuser, testuser2, and admin (Group chat)
-    conversation2 = Conversation(title="Study Group")
-    session.add(conversation2)
     session.commit()
-    session.refresh(conversation2)
-
-    if conversation2.id:
-        participant3 = ConversationParticipant(
-            conversation_id=conversation2.id, user_id=testuser.id
-        )
-        participant4 = ConversationParticipant(
-            conversation_id=conversation2.id, user_id=testuser2.id
-        )
-        participant5 = ConversationParticipant(conversation_id=conversation2.id, user_id=admin.id)
-        session.add(participant3)
-        session.add(participant4)
-        session.add(participant5)
-        session.commit()
-
-        # Messages in conversation 2
-        message3 = Message(
-            content="Spotykamy się w bibliotece o 18:00?",
-            sender_id=admin.id,
-            conversation_id=conversation2.id,
-        )
-        message4 = Message(
-            content="Ok, będę!",
-            sender_id=testuser.id,
-            conversation_id=conversation2.id,
-        )
-        message5 = Message(
-            content="Ja też dołączę!",
-            sender_id=testuser2.id,
-            conversation_id=conversation2.id,
-        )
-        session.add(message3)
-        session.add(message4)
-        session.add(message5)
-
-    session.commit()
-    logger.info("Created 2 sample conversations with messages.")
+    logger.info("Created a sample one-to-one conversations with messages.")
 
 
 def create_sample_groups(session: Session) -> None:

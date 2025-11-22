@@ -1,6 +1,6 @@
 from datetime import UTC, datetime
 
-from sqlmodel import Session, func, select
+from sqlmodel import Session, desc, func, select
 
 from models.models import Event, EventAttendee, User
 
@@ -128,3 +128,14 @@ def remove_attendee(session: Session, user_id: int, event_id: int) -> bool:
     session.delete(attendee)
     session.commit()
     return True
+
+
+def get_event_attendees(session: Session, event_id: int) -> list[tuple[EventAttendee, User]]:
+    """Get all attendees for an event with their user information."""
+    statement = (
+        select(EventAttendee, User)
+        .join(User, EventAttendee.user_id == User.id)
+        .where(EventAttendee.event_id == event_id)
+        .order_by(desc(EventAttendee.joined_at))
+    )
+    return list(session.exec(statement).all())

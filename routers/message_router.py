@@ -2,12 +2,13 @@ import json
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect, status
-from sqlmodel import Session
+from sqlmodel import Session, select
 
 from database.database import get_session
 from models.models import (
     Conversation,
     ConversationCreate,
+    ConversationParticipant,
     ConversationRead,
     Message,
     MessageCreate,
@@ -41,23 +42,46 @@ def create_conversation_endpoint(
     current_user: User = current_user,
     session: Session = session,
 ) -> Conversation:
-    """Create a new conversation with specified participants."""
+    """Create a new one-to-one conversation."""
     if not current_user.id:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="User ID is missing"
         )
 
-    # Validate all participants exist
-    for participant_id in conversation_data.participant_ids:
-        participant = get_user_by_id(session, participant_id)
-        if not participant:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"User with ID {participant_id} not found",
-            )
+    # Cannot create conversation with yourself
+    if conversation_data.participant_id == current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot create a conversation with yourself",
+        )
 
-    # Create conversation
-    conversation = Conversation(title=conversation_data.title)
+    # Validate participant exists
+    participant = get_user_by_id(session, conversation_data.participant_id)
+    if not participant:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"User with ID {conversation_data.participant_id} not found",
+        )
+
+    # Check if conversation already exists between these two users
+    existing_conversation: Conversation | None = session.exec(
+        select(Conversation)
+        .join(ConversationParticipant, Conversation.id == ConversationParticipant.conversation_id)
+        .where(ConversationParticipant.user_id == current_user.id)
+        .where(
+            Conversation.id.in_(  # type: ignore
+                select(ConversationParticipant.conversation_id).where(
+                    ConversationParticipant.user_id == conversation_data.participant_id
+                )
+            )
+        )
+    ).first()
+
+    if existing_conversation:
+        return existing_conversation
+
+    # Create conversation with participant's username as title
+    conversation = Conversation(title=f"Chat with {participant.username}")
     created_conversation = create_conversation(session, conversation)
 
     if not created_conversation.id:
@@ -66,13 +90,9 @@ def create_conversation_endpoint(
             detail="Conversation creation failed",
         )
 
-    # Add creator as participant
+    # Add both participants
     add_participant(session, created_conversation.id, current_user.id)
-
-    # Add other participants
-    for participant_id in conversation_data.participant_ids:
-        if participant_id != current_user.id:  # Avoid duplicate
-            add_participant(session, created_conversation.id, participant_id)
+    add_participant(session, created_conversation.id, conversation_data.participant_id)
 
     return created_conversation
 

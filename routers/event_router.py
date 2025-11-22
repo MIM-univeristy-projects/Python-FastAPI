@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status
+from pydantic import BaseModel
 from sqlmodel import Session
 
 from database.database import get_session
@@ -9,12 +10,24 @@ from models.models import (
     EventCreate,
     EventUpdate,
     User,
+    UserRead,
 )
+
+
+class EventAttendeeResponse(BaseModel):
+    """Response model for event attendee with user information."""
+
+    user: UserRead
+    status: str
+    joined_at: str
+
+
 from repositories.event_repo import (
     add_attendee,
     create_event,
     delete_event,
     get_all_events,
+    get_event_attendees,
     get_event_by_id,
     update_event,
 )
@@ -209,3 +222,45 @@ def update_registration_status(
     # Update user registration status (enum.value converts to string)
     attendee = add_attendee(session, current_user.id, event_id, status=attendance_status.value)
     return attendee
+
+
+@router.get("/{event_id}/attendees", response_model=list[EventAttendeeResponse])
+def get_event_attendees_endpoint(
+    event_id: int,
+    session: Session = session,
+) -> list[EventAttendeeResponse]:
+    """
+    Get all attendees for a specific event with their user information and attendance status.
+
+    Returns a list of attendees with user details (id, username, email, etc.)
+    and their attendance status. This endpoint is public - no authentication required.
+    """
+    # Check if event exists
+    event = get_event_by_id(session, event_id)
+    if not event:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Event not found")
+
+    # Get attendees with user information
+    attendees_data = get_event_attendees(session, event_id)
+
+    # Format response
+    result: list[EventAttendeeResponse] = []
+    for attendee, user in attendees_data:
+        result.append(
+            EventAttendeeResponse(
+                user=UserRead(
+                    id=user.id,  # type: ignore
+                    email=user.email,
+                    username=user.username,
+                    first_name=user.first_name,
+                    last_name=user.last_name,
+                    role=user.role,
+                    is_active=user.is_active,
+                    created_at=user.created_at,
+                ),
+                status=attendee.status.value,  # type: ignore
+                joined_at=str(attendee.joined_at),
+            )
+        )
+
+    return result
