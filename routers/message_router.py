@@ -1,4 +1,5 @@
 import json
+from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect, status
 from sqlmodel import Session
@@ -332,7 +333,7 @@ async def websocket_endpoint(
                         continue
 
                     # Broadcast message to all participants
-                    broadcast_data = {
+                    broadcast_data: dict[str, Any] = {
                         "type": "message",
                         "id": created_message.id,
                         "content": created_message.content,

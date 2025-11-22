@@ -4,7 +4,6 @@ from datetime import UTC, datetime, timedelta
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
-from fastapi.staticfiles import StaticFiles
 from sqlmodel import Session, SQLModel, select
 
 from database.database import engine
@@ -553,9 +552,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-# Mount static files for WebSocket test page
-app.mount("/static", StaticFiles(directory="static"), name="static")
 
 
 @app.get("/", response_class=RedirectResponse)
