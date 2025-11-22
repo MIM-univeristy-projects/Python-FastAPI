@@ -25,6 +25,7 @@ from repositories.user_repo import (
     get_user_by_email,
     get_user_by_id,
     get_user_by_username,
+    search_users,
 )
 from routers.auth_routes import TokenWithUser, login
 from services.security import get_current_active_user, get_password_hash
@@ -225,6 +226,22 @@ def update_profile_comment_endpoint(
         created_at=str(updated_comment.created_at),
         author_name=current_user.username,
     )
+
+
+@router.get("/search", response_model=list[UserRead])
+def search_users_endpoint(
+    query: str,
+    session: Session = session,
+) -> list[User]:
+    """
+    Search for users by username, first name, or last name.
+    """
+    if len(query) < 3:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Search query must be at least 3 characters long",
+        )
+    return search_users(session, query)
 
 
 @router.get("/{user_id}", response_model=UserRead)

@@ -4,8 +4,8 @@ from models.models import Post, PostLike, User
 
 
 def get_all_posts(session: Session) -> list[Post]:
-    """Get all posts ordered by newest first."""
-    statement = select(Post).order_by(desc(Post.created_at))
+    """Get all posts ordered by newest first. Excludes group posts."""
+    statement = select(Post).where(Post.group_id == None).order_by(desc(Post.created_at))  # noqa: E711
     return list(session.exec(statement).all())
 
 

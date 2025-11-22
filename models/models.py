@@ -58,6 +58,7 @@ class Post(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
     content: str = Field(sa_column=Column(TEXT))
     author_id: int = Field(foreign_key="user.id", index=True)
+    group_id: int | None = Field(default=None, foreign_key="group.id", index=True)
     created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
 
@@ -158,6 +159,27 @@ class EventAttendee(SQLModel, table=True):
     status: AttendanceStatusEnum = Field(
         sa_column=Column(SAEnum(AttendanceStatusEnum)), default=AttendanceStatusEnum.ATTENDING
     )
+    joined_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+
+
+class Group(SQLModel, table=True):
+    """Group model for managing user groups."""
+
+    id: int | None = Field(default=None, primary_key=True)
+    name: str = Field(max_length=100, unique=True)
+    description: str = Field(sa_column=Column(TEXT))
+    creator_id: int = Field(foreign_key="user.id", index=True)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+
+
+class GroupMember(SQLModel, table=True):
+    """GroupMember model for managing group membership."""
+
+    __tablename__ = "group_members"  # type: ignore
+
+    id: int | None = Field(default=None, primary_key=True)
+    group_id: int = Field(foreign_key="group.id", index=True)
+    user_id: int = Field(foreign_key="user.id", index=True)
     joined_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
 
@@ -277,6 +299,23 @@ class LikesInfo(SQLModel):
 
     likes_count: int
     liked_by_current_user: bool
+
+
+class GroupCreate(SQLModel):
+    """Group creation model."""
+
+    name: str = Field(min_length=3, max_length=100)
+    description: str
+
+
+class GroupRead(SQLModel):
+    """Group read model."""
+
+    id: int
+    name: str
+    description: str
+    creator_id: int
+    created_at: datetime
 
 
 # ============================================================================

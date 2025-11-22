@@ -1,4 +1,5 @@
 from contextlib import asynccontextmanager
+from datetime import UTC, datetime, timedelta
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -6,13 +7,14 @@ from fastapi.responses import RedirectResponse
 from sqlmodel import Session, SQLModel, select
 
 from database.database import engine
-from models.models import Post, User, UserRole
+from models.models import Event, Post, ProfileComment, User, UserRole
 from routers import (
     admin_router,
     auth_routes,
     comment_router,
     event_router,
     friendship_router,
+    group_router,
     post_router,
     user_router,
 )
@@ -122,6 +124,106 @@ def create_sample_posts(session: Session) -> None:
     logger.info(f"Created {len(sample_posts)} sample posts.")
 
 
+def create_sample_events(session: Session) -> None:
+    """
+    Create sample events for testing if they don't already exist.
+
+    Args:
+        session: Database session
+    """
+    existing_events = session.exec(select(Event)).all()
+    if existing_events:
+        logger.info(f"{len(existing_events)} events already exist. Skipping sample event creation.")
+        return
+
+    admin = session.exec(select(User).where(User.username == "admin")).one_or_none()
+
+    if not admin:
+        logger.warning("Cannot create sample events: admin user not found.")
+        return
+
+    if not admin.id:
+        logger.warning("Cannot create sample events: admin ID is missing.")
+        return
+
+    now = datetime.now(UTC)
+
+    sample_events = [
+        Event(
+            title="Hackathon 2025",
+            description="COroczny hackathon dla studentów wszystkich kierunków. "
+            "Zarejestruj się, aby współpracować nad innowacyjnymi projektami!",
+            location="Hala Główna",
+            start_date=now + timedelta(days=7),
+            end_date=now + timedelta(days=7, hours=24),
+            creator_id=admin.id,
+        ),
+        Event(
+            title="Wspólna nauka: Python",
+            description="Cotygodniowa grupa naukowa Pythona dla początkujących.",
+            location="Biblioteka Pokój 301",
+            start_date=now + timedelta(days=2, hours=14),
+            end_date=now + timedelta(days=2, hours=16),
+            creator_id=admin.id,
+        ),
+    ]
+
+    for event in sample_events:
+        session.add(event)
+
+    session.commit()
+    logger.info(f"Created {len(sample_events)} sample events.")
+
+
+def create_sample_profile_comments(session: Session) -> None:
+    """
+    Create sample profile comments for testing if they don't already exist.
+
+    Args:
+        session: Database session
+    """
+    existing_comments = session.exec(select(ProfileComment)).all()
+    if existing_comments:
+        logger.info(f"{len(existing_comments)} profile comments already exist. Skipping creation.")
+        return
+
+    testuser = session.exec(select(User).where(User.username == "testuser")).one_or_none()
+    testuser2 = session.exec(select(User).where(User.username == "testuser2")).one_or_none()
+    admin = session.exec(select(User).where(User.username == "admin")).one_or_none()
+
+    if not testuser or not testuser2 or not admin:
+        logger.warning("Cannot create sample profile comments: required users not found.")
+        return
+
+    if not testuser.id or not testuser2.id or not admin.id:
+        logger.warning("Cannot create sample profile comments: user IDs are missing.")
+        return
+
+    sample_comments = [
+        ProfileComment(
+            content="Świetny współlokator! Zawsze sprząta po sobie.",
+            author_id=testuser2.id,
+            profile_user_id=testuser.id,
+        ),
+        ProfileComment(
+            content="Bardzo pomocny przy projektach z Pythona.",
+            author_id=admin.id,
+            profile_user_id=testuser.id,
+        ),
+        ProfileComment(
+            content="Dzięki za pożyczenie notatek!",
+            author_id=testuser.id,
+            profile_user_id=testuser2.id,
+        ),
+    ]
+
+    for comment in sample_comments:
+        session.add(comment)
+
+    session.commit()
+    logger.info(f"Created {len(sample_comments)} sample profile comments.")
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Lifespan context manager for application startup/shutdown events."""
@@ -160,6 +262,8 @@ async def lifespan(app: FastAPI):
         )
 
         create_sample_posts(session)
+        create_sample_events(session)
+        create_sample_profile_comments(session)
 
     logger.info("Application lifespan startup complete.")
     yield
@@ -173,6 +277,7 @@ app.include_router(post_router.router)
 app.include_router(comment_router.router)
 app.include_router(event_router.router)
 app.include_router(friendship_router.router)
+app.include_router(group_router.router)
 
 origins: list[str] = [
     "http://localhost",

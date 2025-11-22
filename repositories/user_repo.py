@@ -44,3 +44,22 @@ def get_user_by_id(session: Session, user_id: int) -> User | None:
     """Retrieve a user by their ID."""
     statement = select(User).where(User.id == user_id)
     return session.exec(statement).one_or_none()
+
+
+def search_users(session: Session, query: str) -> list[User]:
+    """
+    Search for users by username, first name, or last name.
+
+    Args:
+        session (Session): The database session.
+        query (str): The search query string.
+
+    Returns:
+        list[User]: A list of users matching the search criteria.
+    """
+    statement = select(User).where(
+        (User.username.ilike(f"%{query}%"))  # type: ignore
+        | (User.first_name.ilike(f"%{query}%"))  # type: ignore
+        | (User.last_name.ilike(f"%{query}%"))  # type: ignore
+    )
+    return list(session.exec(statement).all())
