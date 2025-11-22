@@ -21,7 +21,7 @@ from models.models import (
     User,
     UserRole,
 )
-from services.security import create_access_token, get_password_hash
+from services.security import get_password_hash
 
 
 class FixtureEnum(str, enum.Enum):
@@ -209,27 +209,34 @@ def setup_friendship_scenario_fixture(session: Session) -> FriendshipScenario:
 
 
 @pytest.fixture(name=FixtureEnum.SECOND_USER)
-def second_user_fixture(session: Session) -> AuthenticatedUser:
-    """Create a second test user with authentication."""
+def second_user_fixture(client: TestClient, session: Session) -> AuthenticatedUser:
+    """Create a second logged-in user and return user data with access token."""
+    # Create a second test user
     user = User(
+        email="seconduser@example.com",
         username="seconduser",
-        email="second@test.com",
         first_name="Second",
         last_name="User",
-        hashed_password=get_password_hash("testpass123"),
+        hashed_password=get_password_hash("secondpassword"),
         role=UserRole.USER,
+        is_active=True,
     )
     session.add(user)
     session.commit()
     session.refresh(user)
 
-    # Generate token
-    access_token = create_access_token(data={"sub": user.username})
+    # Login to get access token
+    response = client.post(
+        "/auth/token",
+        data={"username": "seconduser", "password": "secondpassword"},
+    )
+    assert response.status_code == 200
+    token_data = response.json()
 
     return AuthenticatedUser(
         user=user,
-        token=access_token,
-        headers={"Authorization": f"Bearer {access_token}"},
+        token=token_data["access_token"],
+        headers={"Authorization": f"Bearer {token_data['access_token']}"},
     )
 
 

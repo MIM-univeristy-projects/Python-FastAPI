@@ -75,6 +75,31 @@ def create_access_token(data: dict[str, Any], expires_delta: timedelta | None = 
     return encoded_jwt
 
 
+def verify_token(token: str) -> dict[str, Any]:
+    """Verify and decode JWT token.
+
+    Args:
+        token (str): JWT token to verify
+
+    Returns:
+        dict: Decoded token payload
+
+    Raises:
+        HTTPException: If token is invalid
+    """
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        return payload
+    except JWTError as e:
+        logger.error(f"JWT decode error: {e}")
+        raise credentials_exception from e
+
+
 async def get_current_user(token: str = Depends(oauth2_scheme), session: Session = session) -> User:
     """Dependency to get the current user based on the JWT token."""
     credentials_exception = HTTPException(

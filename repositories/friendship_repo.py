@@ -34,10 +34,7 @@ def get_accepted_friendship(session: Session, user1_id: int, user2_id: int) -> F
                 (Friendship.requester_id == user1_id) & (Friendship.addressee_id == user2_id),
                 (Friendship.requester_id == user2_id) & (Friendship.addressee_id == user1_id),
             ),
-            or_(
-                Friendship.status == FriendshipStatusEnum.ACCEPTED,
-                Friendship.status == FriendshipStatusEnum.PENDING,
-            ),
+            Friendship.status == FriendshipStatusEnum.ACCEPTED,
         )
     )
     return session.exec(statement).one_or_none()

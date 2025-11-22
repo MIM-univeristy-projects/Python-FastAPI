@@ -4,10 +4,22 @@ from datetime import UTC, datetime, timedelta
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
+from fastapi.staticfiles import StaticFiles
 from sqlmodel import Session, SQLModel, select
 
 from database.database import engine
-from models.models import Event, Post, ProfileComment, User, UserRole
+from models.models import (
+    Conversation,
+    ConversationParticipant,
+    Event,
+    Group,
+    GroupMember,
+    Message,
+    Post,
+    ProfileComment,
+    User,
+    UserRole,
+)
 from routers import (
     admin_router,
     auth_routes,
@@ -15,6 +27,7 @@ from routers import (
     event_router,
     friendship_router,
     group_router,
+    message_router,
     post_router,
     user_router,
 )
@@ -224,6 +237,251 @@ def create_sample_profile_comments(session: Session) -> None:
     logger.info(f"Created {len(sample_comments)} sample profile comments.")
 
 
+def create_sample_conversations(session: Session) -> None:
+    """
+    Create sample conversations and messages for testing if they don't already exist.
+
+    Args:
+        session: Database session
+    """
+    existing_conversations = session.exec(select(Conversation)).all()
+    if existing_conversations:
+        logger.info(
+            f"{len(existing_conversations)} conversations already exist. Skipping creation."
+        )
+        return
+
+    testuser = session.exec(select(User).where(User.username == "testuser")).one_or_none()
+    testuser2 = session.exec(select(User).where(User.username == "testuser2")).one_or_none()
+    admin = session.exec(select(User).where(User.username == "admin")).one_or_none()
+
+    if not testuser or not testuser2 or not admin:
+        logger.warning("Cannot create sample conversations: required users not found.")
+        return
+
+    if not testuser.id or not testuser2.id or not admin.id:
+        logger.warning("Cannot create sample conversations: user IDs are missing.")
+        return
+
+    # Conversation 1: testuser and testuser2
+    conversation1 = Conversation(title="Roommate Chat")
+    session.add(conversation1)
+    session.commit()
+    session.refresh(conversation1)
+
+    if conversation1.id:
+        participant1 = ConversationParticipant(
+            conversation_id=conversation1.id, user_id=testuser.id
+        )
+        participant2 = ConversationParticipant(
+            conversation_id=conversation1.id, user_id=testuser2.id
+        )
+        session.add(participant1)
+        session.add(participant2)
+        session.commit()
+
+        # Messages in conversation 1
+        message1 = Message(
+            content="Cześć! Kiedy planujesz wrócić do akademika?",
+            sender_id=testuser.id,
+            conversation_id=conversation1.id,
+        )
+        message2 = Message(
+            content="Hej! Będę za godzinę. Potrzebujesz czegoś?",
+            sender_id=testuser2.id,
+            conversation_id=conversation1.id,
+        )
+        session.add(message1)
+        session.add(message2)
+
+    # Conversation 2: testuser, testuser2, and admin (Group chat)
+    conversation2 = Conversation(title="Study Group")
+    session.add(conversation2)
+    session.commit()
+    session.refresh(conversation2)
+
+    if conversation2.id:
+        participant3 = ConversationParticipant(
+            conversation_id=conversation2.id, user_id=testuser.id
+        )
+        participant4 = ConversationParticipant(
+            conversation_id=conversation2.id, user_id=testuser2.id
+        )
+        participant5 = ConversationParticipant(conversation_id=conversation2.id, user_id=admin.id)
+        session.add(participant3)
+        session.add(participant4)
+        session.add(participant5)
+        session.commit()
+
+        # Messages in conversation 2
+        message3 = Message(
+            content="Spotykamy się w bibliotece o 18:00?",
+            sender_id=admin.id,
+            conversation_id=conversation2.id,
+        )
+        message4 = Message(
+            content="Ok, będę!",
+            sender_id=testuser.id,
+            conversation_id=conversation2.id,
+        )
+        message5 = Message(
+            content="Ja też dołączę!",
+            sender_id=testuser2.id,
+            conversation_id=conversation2.id,
+        )
+        session.add(message3)
+        session.add(message4)
+        session.add(message5)
+
+    session.commit()
+    logger.info("Created 2 sample conversations with messages.")
+
+
+def create_sample_groups(session: Session) -> None:
+    """
+    Create sample groups for testing if they don't already exist.
+
+    Args:
+        session: Database session
+    """
+    existing_groups = session.exec(select(Group)).all()
+    if existing_groups:
+        logger.info(f"{len(existing_groups)} groups already exist. Skipping sample group creation.")
+        return
+
+    # Get existing users
+    testuser = session.exec(select(User).where(User.username == "testuser")).one_or_none()
+    testuser2 = session.exec(select(User).where(User.username == "testuser2")).one_or_none()
+    admin = session.exec(select(User).where(User.username == "admin")).one_or_none()
+
+    if not testuser or not testuser2 or not admin:
+        logger.warning("Required users not found. Skipping sample group creation.")
+        return
+
+    # Create additional users for groups
+    user3 = create_user_if_not_exists(
+        session=session,
+        username="alice",
+        email="alice@example.com",
+        first_name="Alice",
+        last_name="Johnson",
+        password="TestPassword123",
+        is_active=True,
+    )
+
+    user4 = create_user_if_not_exists(
+        session=session,
+        username="bob",
+        email="bob@example.com",
+        first_name="Bob",
+        last_name="Smith",
+        password="TestPassword123",
+        is_active=True,
+    )
+
+    user5 = create_user_if_not_exists(
+        session=session,
+        username="charlie",
+        email="charlie@example.com",
+        first_name="Charlie",
+        last_name="Brown",
+        password="TestPassword123",
+        is_active=True,
+    )
+
+    if not user3 or not user4 or not user5:
+        logger.warning("Failed to create additional users. Skipping sample group creation.")
+        return
+
+    # Create sample groups
+    group1 = Group(
+        name="Koło Naukowe Informatyki",
+        description=(
+            "Grupa dla studentów informatyki do wspólnej pracy nad zadaniami "
+            "i dzielenia się zasobami."
+        ),
+        creator_id=testuser.id,  # type: ignore
+    )
+    session.add(group1)
+    session.flush()
+
+    group2 = Group(
+        name="Społeczność Piętro 3",
+        description=(
+            "Grupa społeczności mieszkańców 3. piętra. "
+            "Dziel się ogłoszeniami i organizuj wydarzenia!"
+        ),
+        creator_id=testuser2.id,  # type: ignore
+    )
+    session.add(group2)
+    session.flush()
+
+    group3 = Group(
+        name="Weekendowi Wędrowcy",
+        description=(
+            "Grupa dla studentów kochających wędrówki i aktywności na świeżym powietrzu. "
+            "Odkrywajmy razem szlaki!"
+        ),
+        creator_id=user3.id,  # type: ignore
+    )
+    session.add(group3)
+    session.flush()
+
+    group4 = Group(
+        name="Klub Filmowy",
+        description=(
+            "Cotygodniowe wieczory filmowe w świetlicy. Głosuj na filmy i dołącz do nas na popcorn!"
+        ),
+        creator_id=admin.id,  # type: ignore
+    )
+    session.add(group4)
+    session.flush()
+
+    group5 = Group(
+        name="Siłownia Razem",
+        description=(
+            "Ćwiczmy razem i motywujmy się nawzajem. Mile widziane wszystkie poziomy zaawansowania!"
+        ),
+        creator_id=user4.id,  # type: ignore
+    )
+    session.add(group5)
+    session.flush()
+
+    # Add members to groups
+    # CS Study Group members
+    session.add(GroupMember(group_id=group1.id, user_id=testuser.id))  # type: ignore
+    session.add(GroupMember(group_id=group1.id, user_id=testuser2.id))  # type: ignore
+    session.add(GroupMember(group_id=group1.id, user_id=user3.id))  # type: ignore
+    session.add(GroupMember(group_id=group1.id, user_id=user5.id))  # type: ignore
+
+    # Dorm Floor 3 members
+    session.add(GroupMember(group_id=group2.id, user_id=testuser2.id))  # type: ignore
+    session.add(GroupMember(group_id=group2.id, user_id=testuser.id))  # type: ignore
+    session.add(GroupMember(group_id=group2.id, user_id=user4.id))  # type: ignore
+    session.add(GroupMember(group_id=group2.id, user_id=user5.id))  # type: ignore
+
+    # Weekend Hikers members
+    session.add(GroupMember(group_id=group3.id, user_id=user3.id))  # type: ignore
+    session.add(GroupMember(group_id=group3.id, user_id=testuser.id))  # type: ignore
+    session.add(GroupMember(group_id=group3.id, user_id=user4.id))  # type: ignore
+
+    # Movie Night Club members
+    session.add(GroupMember(group_id=group4.id, user_id=admin.id))  # type: ignore
+    session.add(GroupMember(group_id=group4.id, user_id=testuser.id))  # type: ignore
+    session.add(GroupMember(group_id=group4.id, user_id=testuser2.id))  # type: ignore
+    session.add(GroupMember(group_id=group4.id, user_id=user3.id))  # type: ignore
+    session.add(GroupMember(group_id=group4.id, user_id=user4.id))  # type: ignore
+    session.add(GroupMember(group_id=group4.id, user_id=user5.id))  # type: ignore
+
+    # Fitness Buddies members
+    session.add(GroupMember(group_id=group5.id, user_id=user4.id))  # type: ignore
+    session.add(GroupMember(group_id=group5.id, user_id=testuser2.id))  # type: ignore
+    session.add(GroupMember(group_id=group5.id, user_id=user5.id))  # type: ignore
+
+    session.commit()
+    logger.info("Created 5 sample groups with members.")
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Lifespan context manager for application startup/shutdown events."""
@@ -264,6 +522,8 @@ async def lifespan(app: FastAPI):
         create_sample_posts(session)
         create_sample_events(session)
         create_sample_profile_comments(session)
+        create_sample_conversations(session)
+        create_sample_groups(session)
 
     logger.info("Application lifespan startup complete.")
     yield
@@ -278,6 +538,7 @@ app.include_router(comment_router.router)
 app.include_router(event_router.router)
 app.include_router(friendship_router.router)
 app.include_router(group_router.router)
+app.include_router(message_router.router)
 
 origins: list[str] = [
     "http://localhost",
@@ -292,6 +553,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Mount static files for WebSocket test page
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
 
 @app.get("/", response_class=RedirectResponse)

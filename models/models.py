@@ -272,6 +272,7 @@ class ContentWithAuthor(SQLModel):
     id: int
     content: str
     author_id: int
+    group_id: int | None = None
     created_at: str
     author_name: str
 
@@ -316,6 +317,38 @@ class GroupRead(SQLModel):
     description: str
     creator_id: int
     created_at: datetime
+
+
+class ConversationCreate(SQLModel):
+    """Conversation creation model."""
+
+    title: str = Field(min_length=1, max_length=255)
+    participant_ids: list[int] = Field(min_length=1)
+
+
+class ConversationRead(SQLModel):
+    """Conversation read model."""
+
+    id: int
+    title: str
+    created_at: datetime
+
+
+class MessageCreate(SQLModel):
+    """Message creation model."""
+
+    content: str = Field(min_length=1)
+
+
+class MessageRead(SQLModel):
+    """Message read model with sender information."""
+
+    id: int
+    content: str
+    sender_id: int
+    sender_name: str
+    conversation_id: int
+    created_at: str
 
 
 # ============================================================================
