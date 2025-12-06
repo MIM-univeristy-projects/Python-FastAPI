@@ -1769,44 +1769,6 @@ logger.addHandler(file_handler)
 
 ---
 
-## Najlepsze praktyki
-
-### 1. Bezpieczeństwo
-
-- ✅ Używaj silnych haseł dla kluczy JWT
-- ✅ Hashuj hasła algorytmem Argon2
-- ✅ Waliduj wszystkie dane wejściowe
-- ✅ Używaj HTTPS w produkcji
-- ✅ Implementuj rate limiting
-- ✅ Regularnie aktualizuj zależności
-
-### 2. Wydajność
-
-- ✅ Używaj paginacji dla dużych list
-- ✅ Indeksuj kolumny używane w WHERE i JOIN
-- ✅ Używaj connection pooling
-- ✅ Cache'uj często używane dane
-- ✅ Optymalizuj zapytania SQL (unikaj N+1)
-
-### 3. Kod
-
-- ✅ Stosuj type hints
-- ✅ Pisz testy dla wszystkich funkcji
-- ✅ Dokumentuj publiczne API
-- ✅ Używaj dependency injection
-- ✅ Zachowaj DRY (Don't Repeat Yourself)
-- ✅ Stosuj SOLID principles
-
-### 4. Monitoring
-
-- ✅ Loguj wszystkie ważne operacje
-- ✅ Monitoruj wydajność API
-- ✅ Śledź błędy i wyjątki
-- ✅ Używaj health check endpoints
-- ✅ Monitoruj zasoby serwera
-
----
-
 ## API Documentation
 
 FastAPI automatycznie generuje dokumentację API:
