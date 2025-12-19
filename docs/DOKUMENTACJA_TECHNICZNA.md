@@ -1379,7 +1379,16 @@ def auth_headers(test_user):
 
 #### Testy jednostkowe (Unit Tests)
 
-**Przykład** - `test_user_repo.py`:
+**Opis:**
+Testy jednostkowe weryfikują działanie najmniejszych, izolowanych fragmentów kodu, takich jak pojedyncze funkcje repozytoriów czy metody klas, bez angażowania zewnętrznych zależności (np. bez uruchamiania pełnego serwera HTTP). Skupiają się na logice samej funkcji.
+
+**Analiza przykładu (`tests/test_user_repo.py`):**
+W teście `test_create_user` sprawdzana jest funkcja repozytorium odpowiedzialna za tworzenie użytkownika. Test tworzy obiekt `User`, zapisuje go w sesji bazy danych i weryfikuje, czy zwrócony obiekt posiada poprawne atrybuty (np. email, username) oraz czy został mu nadany identyfikator.
+
+**Korzyści:**
+* Szybka weryfikacja poprawności podstawowej logiki biznesowej.
+* Łatwe lokalizowanie błędów, ponieważ testy obejmują mały wycinek kodu.
+* Stanowią dokumentację dla poszczególnych funkcji.
 
 ```python
 def test_get_user_by_username(test_session, test_user):
@@ -1404,7 +1413,16 @@ def test_create_user(test_session):
 
 #### Testy routerów (Router Tests)
 
-**Przykład** - `test_auth_router.py`:
+**Opis:**
+Testy routerów sprawdzają działanie endpointów API z perspektywy klienta HTTP. Weryfikują, czy aplikacja poprawnie przyjmuje żądania (request), przetwarza je i zwraca oczekiwane odpowiedzi (response) wraz z odpowiednimi kodami statusu (np. 200, 201, 401).
+
+**Analiza przykładu (`tests/test_auth_router.py`):**
+Przykład `test_login_success` symuluje wysłanie żądania POST na endpoint `/auth/token` z prawidłowymi danymi logowania. Test sprawdza, czy serwer zwraca kod 200 OK oraz czy w ciele odpowiedzi znajduje się `access_token` i poprawne dane użytkownika.
+
+**Korzyści:**
+* Gwarantują, że interfejs API działa zgodnie z kontraktem (specyfikacją).
+* Weryfikują poprawność mapowania danych wejściowych na modele Pydantic.
+* Sprawdzają integrację routera z warstwą serwisów i bazy danych.
 
 ```python
 def test_login_success(test_client, test_user):
@@ -1428,7 +1446,16 @@ def test_login_invalid_credentials(test_client, test_user):
 
 #### Testy integracyjne (Integration Tests)
 
-**Przykład** - `test_integration.py`:
+**Opis:**
+Testy integracyjne weryfikują współpracę wielu komponentów systemu w ramach kompletnych scenariuszy biznesowych. Sprawdzają przepływ danych między różnymi modułami (np. od rejestracji, przez logowanie, aż po dostęp do zasobów).
+
+**Analiza przykładu (`tests/test_integration.py`):**
+Scenariusz `test_create_post_like_and_comment_workflow` realizuje pełną ścieżkę użytkownika: logowanie i pobranie tokenu, utworzenie nowego posta, polubienie go, dodanie komentarza i finalnie weryfikację, czy komentarz został poprawnie zapisany pod postem.
+
+**Korzyści:**
+* Wykrywają błędy wynikające z interakcji między modułami, które nie są widoczne w testach jednostkowych.
+* Dają pewność, że kluczowe procesy biznesowe działają od początku do końca.
+* Weryfikują spójność danych przy złożonych operacjach.
 
 ```python
 def test_create_post_and_comment_flow(test_client, auth_headers):
@@ -1462,7 +1489,16 @@ def test_create_post_and_comment_flow(test_client, auth_headers):
 
 #### Testy bezpieczeństwa (Security Tests)
 
-**Przykład** - `test_security.py`:
+**Opis:**
+Testy te koncentrują się na weryfikacji mechanizmów ochronnych aplikacji, takich jak hashowanie haseł, generowanie i walidacja tokenów JWT oraz kontrola dostępu (RBAC).
+
+**Analiza przykładu (`tests/test_security.py`):**
+Test `test_password_hashing` sprawdza, czy hasło jest poprawnie hashowane (czy hash różni się od tekstu jawnego) oraz czy mechanizm weryfikacji poprawnie rozpoznaje prawidłowe i błędne hasła. Inny test weryfikuje strukturę i czas wygasania tokenów JWT.
+
+**Korzyści:**
+* Zapobiegają krytycznym podatnościom, takim jak przechowywanie haseł jawnym tekstem.
+* Zapewniają poprawność implementacji autoryzacji i autentykacji.
+* Gwarantują zgodność ze standardami bezpieczeństwa (np. użycie odpowiednich algorytmów).
 
 ```python
 def test_password_hashing():
@@ -1481,7 +1517,16 @@ def test_jwt_token_creation_and_verification():
 
 #### Testy WebSocket
 
-**Przykład** - `test_websocket.py`:
+**Opis:**
+Testy WebSocket sprawdzają komunikację w czasie rzeczywistym. Weryfikują nawiązywanie połączenia, przesyłanie wiadomości od klienta do serwera oraz odbieranie wiadomości (broadcast) przez innych uczestników.
+
+**Analiza przykładu (`tests/test_websocket.py`):**
+Test `test_websocket_connection` nawiązuje połączenie WebSocket z użyciem tokenu autoryzacyjnego. Następnie wysyła wiadomość JSON i oczekuje na odpowiedź zwrotną od serwera, weryfikując czy otrzymana wiadomość zawiera poprawną treść i ID nadawcy.
+
+**Korzyści:**
+* Weryfikują stabilność połączeń dwukierunkowych.
+* Sprawdzają mechanizmy zarządzania sesjami WebSocket (Connection Manager).
+* Upewniają się, że wiadomości trafiają do właściwych odbiorców w czasie rzeczywistym.
 
 ```python
 def test_websocket_connection(test_client, test_user, auth_headers):
@@ -1500,7 +1545,16 @@ def test_websocket_connection(test_client, test_user, auth_headers):
 
 #### Testy wydajnościowe (Performance Tests)
 
-**Przykład** - `test_performance.py`:
+**Opis:**
+Testy wydajnościowe mierzą czas odpowiedzi aplikacji oraz jej zachowanie przy przetwarzaniu większej ilości danych. Pozwalają zidentyfikować "wąskie gardła" w systemie.
+
+**Analiza przykładu (`tests/test_performance.py`):**
+Test `test_post_list_performance` generuje 100 postów w bazie danych, a następnie mierzy czas potrzebny na pobranie ich listy przez endpoint API. Test kończy się sukcesem tylko wtedy, gdy operacja zajmie mniej niż 2 sekundy.
+
+**Korzyści:**
+* Zapobiegają degradacji wydajności przy wzroście ilości danych.
+* Pozwalają wykryć nieoptymalne zapytania do bazy danych (np. problem N+1).
+* Gwarantują odpowiedni czas reakcji systemu (SLA).
 
 ```python
 def test_list_posts_performance(test_client, auth_headers, test_session):
@@ -1523,7 +1577,16 @@ def test_list_posts_performance(test_client, auth_headers, test_session):
 
 #### Testy obsługi błędów (Error Handling Tests)
 
-**Przykład** - `test_error_handling.py`:
+**Opis:**
+Testy obsługi błędów sprawdzają, jak system zachowuje się w sytuacjach nieprawidłowych (tzw. "sad path"). Weryfikują, czy API zwraca odpowiednie kody błędów i czytelne komunikaty zamiast ulegać awarii.
+
+**Analiza przykładu (`tests/test_error_handling.py`):**
+Test `test_get_nonexistent_post` próbuje pobrać post o nieistniejącym ID. Oczekuje się, że system nie zwróci błędu wewnętrznego (500), lecz obsłużony wyjątek `HTTPException` z kodem 404 Not Found.
+
+**Korzyści:**
+* Zwiększają odporność aplikacji na błędne dane wejściowe.
+* Poprawiają doświadczenie użytkownika (UX) poprzez jasne komunikaty o błędach.
+* Zapobiegają wyciekom informacji technicznych w przypadku awarii.
 
 ```python
 def test_404_not_found(test_client, auth_headers):
